@@ -2,7 +2,7 @@ name: Branch Build and Push
 
 on:
   push:
-    branches: '**'
+    branches: ['**']
 
 jobs:
   docker-build-and-push:
@@ -35,6 +35,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
+          file: docker/Dockerfile
           push: true
           tags: r0cc4rd0/nextcloud-lh-bak:${{ env.commit_var }}, r0cc4rd0/nextcloud-lh-bak:${{ env.branch_var }}-latest
           no-cache: false
