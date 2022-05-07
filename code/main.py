@@ -1,22 +1,6 @@
-# Copyright 2019 The Kubernetes Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+import os
 
-"""
-Shows the functionality of exec using a Busybox container.
-"""
-
-import time
+from time import sleep
 
 from kubernetes import config
 from kubernetes.client import Configuration
@@ -24,98 +8,15 @@ from kubernetes.client.api import core_v1_api
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 
+# Declaring global variables
+k8s_api_instance = None
 
-def exec_commands(api_instance):
-    name = 'busybox-test'
-    resp = None
-    try:
-        resp = api_instance.read_namespaced_pod(name=name,
-                                                namespace='default')
-    except ApiException as e:
-        if e.status != 404:
-            print("Unknown error: %s" % e)
-            exit(1)
+# Declaring global const
+ENTER_MAINTENANCE_CMD='runuser -u www-data -- php occ maintenance:mode --on'
+EXIT_MAINTENANCE_CMD='runuser -u www-data -- php occ maintenance:mode --off'
 
-    if not resp:
-        print("Pod %s does not exist. Creating it..." % name)
-        pod_manifest = {
-            'apiVersion': 'v1',
-            'kind': 'Pod',
-            'metadata': {
-                'name': name
-            },
-            'spec': {
-                'containers': [{
-                    'image': 'busybox',
-                    'name': 'sleep',
-                    "args": [
-                        "/bin/sh",
-                        "-c",
-                        "while true;do date;sleep 5; done"
-                    ]
-                }]
-            }
-        }
-        resp = api_instance.create_namespaced_pod(body=pod_manifest,
-                                                  namespace='default')
-        while True:
-            resp = api_instance.read_namespaced_pod(name=name,
-                                                    namespace='default')
-            if resp.status.phase != 'Pending':
-                break
-            time.sleep(1)
-        print("Done.")
-
-    # Calling exec and waiting for response
-    exec_command = [
-        '/bin/sh',
-        '-c',
-        'ls -al /']
-    resp = stream(api_instance.connect_get_namespaced_pod_exec,
-                  name,
-                  'default',
-                  command=exec_command,
-                  stderr=True, stdin=False,
-                  stdout=True, tty=False)
-    print("Response: " + resp)
-
-    # Calling exec interactively
-    exec_command = ['/bin/sh']
-    resp = stream(api_instance.connect_get_namespaced_pod_exec,
-                  name,
-                  'default',
-                  command=exec_command,
-                  stderr=True, stdin=True,
-                  stdout=True, tty=False,
-                  _preload_content=False)
-    commands = [
-        "ls -al /",
-        "echo \"This message goes to stderr\" >&2",
-    ]
-
-    while resp.is_open():
-        resp.update(timeout=1)
-        if resp.peek_stdout():
-            print("STDOUT: %s" % resp.read_stdout())
-        if resp.peek_stderr():
-            print("STDERR: %s" % resp.read_stderr())
-        if commands:
-            c = commands.pop(0)
-            print("Running command... %s\n" % c)
-            resp.write_stdin(c + "\n")
-        else:
-            break
-
-    resp.write_stdin("date\n")
-    sdate = resp.readline_stdout(timeout=3)
-    print("Server date command returns: %s" % sdate)
-    resp.write_stdin("whoami\n")
-    user = resp.readline_stdout(timeout=3)
-    print("Server user is: %s" % user)
-    resp.close()
-
-
-def main():
+def init_kubernetes_api():
+    # Load and set KUBECONFIG
     config.load_kube_config()
     try:
         c = Configuration().get_default_copy()
@@ -123,10 +24,105 @@ def main():
         c = Configuration()
         c.assert_hostname = False
     Configuration.set_default(c)
-    core_v1 = core_v1_api.CoreV1Api()
 
-    exec_commands(core_v1)
+    # Create core api object
+    global k8s_api_instance
+    k8s_api_instance = core_v1_api.CoreV1Api()
+
+
+def get_pod_by_label(namespace, app_name):
+    resp = None
+    selector="app="+app_name
+
+    # Retrieving pod and checking that there is just one pod having that lable
+    try:
+        resp = k8s_api_instance.list_namespaced_pod(namespace=namespace, label_selector=selector)
+    except ApiException as e:
+        if e.status != 404:
+            print("Unknown error: %s" % e)
+            exit(1)
+    
+    if (resp is None) or (len(resp.items) != 1):
+        print("There are too many pods with the label " + app_name + " or there isn't any. Just one pod must be present.")
+        exit(3)
+    else:
+        return resp.items.pop()
+
+
+def exec_container_command(namespace, app_name, command):
+    # Retrieving the pod and checking that is in "Running" state
+    pod = get_pod_by_label(namespace=namespace, app_name=app_name)
+    if pod.status.phase != 'Running':
+        print("The pod with label " + app_name + " is not in 'Running' state.")
+        exit(4)
+    
+    # Creating exec command
+    exec_command = ['/bin/bash', '-c', command]
+
+    # Calling exec and waiting for response
+    resp = stream(k8s_api_instance.connect_get_namespaced_pod_exec,
+                  pod.metadata.name,
+                  namespace,
+                  command=exec_command,
+                  stderr=True, stdin=False,
+                  stdout=True, tty=False)
+    return resp
+    
+
+def enter_maintenance_mode_nextcloud(namespace, app_name):
+    resp = exec_container_command(namespace=namespace,app_name=app_name, command=ENTER_MAINTENANCE_CMD)
+    if resp == "Maintenance mode enabled\n":
+        sleep(30)
+    else:
+        print("Error entering maintenance mode")
+        exit_maintenance_mode_nextcloud(namespace=namespace,app_name=app_name)
+        exit(4)
+
+def exit_maintenance_mode_nextcloud(namespace, app_name):
+    resp = exec_container_command(namespace=namespace,app_name=app_name, command=EXIT_MAINTENANCE_CMD)
+    if resp != "Maintenance mode disabled\n":
+        print("Error exiting maintenance mode. You have to do it by hands")
+        exit(5)
+        
+def create_mysql_backup():
+    pass
+
+def create_snapshots():
+    pass
+
+def create_backups():
+    pass
+
+def main():
+    # Read ancd check the environment variables
+    backup_type=os.getenv('BACK_TYPE')
+    if backup_type not in ['FULL-BACKUP', 'SNAPSHOT']:
+        print('Wrong backup type. BACK_TYPE is mandatory and must be either "FULL_BACKUP" or "SNAPSHOT"')
+        exit(1)
+
+    namespace=os.getenv('NAMESPACE')
+    if namespace == None:
+        namespace = 'default'
+
+    app_name=os.getenv('APP_NAME')
+    if app_name == None:
+        print('"APP_NAME" environment variable is mandatory')
+        exit(2)
+
+    longhorn_url=os.getenv('LONGHORN_URL')
+    if longhorn_url == None:
+        print('The LONGHORN_URL env variable is mandatory.')
+        exit(6)
+
+    init_kubernetes_api()
+
+    enter_maintenance_mode_nextcloud(namespace=namespace,app_name=app_name)
+
+    exit_maintenance_mode_nextcloud(namespace=namespace,app_name=app_name)
+    
+    return 0
 
 
 if __name__ == '__main__':
     main()
+    exit(0)
