@@ -1,54 +1,18 @@
-import os
 from datetime import datetime
 from time import sleep
 
-from kubernetes import config
-from kubernetes.client import Configuration
-from kubernetes.client.api import core_v1_api
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 
-import longhorn
+from api_instances_handler import ApiInstancesHandler
+from lh_backup_env_handler import LHBackupEnvironmentException
+from api_instances_handler import ApiInstancesHandlerException
+from lh_backup_env_handler import LHBackupEnvironment
 
-# Declaring global variables
-k8s_api_instance = None
-lh_client = None
-mariadb_client = None
 
 # Declaring global const
 ENTER_MAINTENANCE_CMD='runuser -u www-data -- php occ maintenance:mode --on'
 EXIT_MAINTENANCE_CMD='runuser -u www-data -- php occ maintenance:mode --off'
-
-def init_kubernetes_api():
-    # Load and set KUBECONFIG
-    config.load_kube_config()
-    try:
-        c = Configuration().get_default_copy()
-    except AttributeError:
-        c = Configuration()
-        c.assert_hostname = False
-    Configuration.set_default(c)
-
-    # Create core api object
-    global k8s_api_instance
-    k8s_api_instance = core_v1_api.CoreV1Api()
-
-
-def init_longhorn_client(longhorn_url):
-    global lh_client
-    try:
-        lh_client = longhorn.Client(url=longhorn_url)
-    except BaseException:
-        print("Unable to connect to Longhorn API")
-        exit(1)
-
-
-def init_mariadb_client():
-    try:
-        pass
-    except BaseException:
-        pass
-    pass
 
 def get_pod_by_label(namespace, app_name):
     resp = None
@@ -107,7 +71,6 @@ def exit_maintenance_mode_nextcloud(namespace, app_name):
 
 
 def get_pv_name_by_pvc_name(namespace,pvc_name):
-    global k8s_api_instance
     pvc=k8s_api_instance.read_namespaced_persistent_volume_claim(namespace=namespace, name=pvc_name)
     return pvc.spec.volume_name
 
@@ -152,68 +115,25 @@ def clean_old_backup_snapshot():
     pass
 
 def main():
-    # Read ancd check the environment variables
-    backup_type=os.getenv('BACKUP_TYPE')
-    if backup_type not in ['FULL-BACKUP', 'SNAPSHOT']:
-        print('Wrong backup type. BACKUP_TYPE is mandatory and must be either "FULL_BACKUP" or "SNAPSHOT"')
-        exit(1)
-
-    namespace=os.getenv('NAMESPACE')
-    if namespace == None:
-        namespace = 'default'
-
-    app_name=os.getenv('APP_NAME')
-    if app_name == None:
-        print('"APP_NAME" environment variable is mandatory')
-        exit(1)
-    
-    db_name=os.getenv('DB_APP_NAME')
-    if db_name == None:
-        print('"DB_APP_NAME" environment variable is mandatory')
-        exit(1)
-
-    db_password=os.getenv('DB_ROOT_PASSWORD')
-    if db_password == None:
-        print('"DB_ROOT_PASSWORD" environment variable is mandatory')
-        exit(1)
-
-    longhorn_url=os.getenv('LONGHORN_URL')
-    if longhorn_url == None:
-        print('The LONGHORN_URL env variable is mandatory.')
-        exit(1)
-
-    mysql_backup_volume_name=os.getenv('MYSQL_BACKUP_VOLUME_NAME')
-    if mysql_backup_volume_name == None:
-        print('The MYSQL_VOLUME_NAME env variable is mandatory.')
-        exit(1)
-
-    nextcloud_volume_name=os.getenv('NEXTCLOUD_VOLUME_NAME')
-    if nextcloud_volume_name == None:
-        print('The NEXTCLOUD_VOLUME_NAME env variable is mandatory.')
-        exit(1)
-
-    # Init kubernetes, longhorn and mariadb clients
+    # Init Environment and kubernetes, longhorn and mariadb clients
     try:
-        init_kubernetes_api()
-        init_longhorn_client(longhorn_url=longhorn_url)
-        init_mariadb_client()
-    except BaseException:
-        if k8s_api_instance != None:
-            pass
-        if lh_client != None:
-            pass
-        if mariadb_client != None:
-            pass
-        print("Unable to initialize system.")
+        lhbe = LHBackupEnvironment()
+        apis = ApiInstancesHandler(longhorn_url=lhbe.longhorn_url)
+    except LHBackupEnvironmentException as ee:
+        print(ee)
+        exit(1)
+    except ApiInstancesHandlerException as ae:
+        print(ae)
+        del(apis)
         exit(1)
 
     ### Init backup process ###
     try:
         # Enter NextCloud Maintenance Mode
-        enter_maintenance_mode_nextcloud(namespace=namespace,app_name=app_name)
+        enter_maintenance_mode_nextcloud(namespace=lhbe.namespace,app_name=lhbe.app_name)
 
         # Create MariaDB backup
-        create_mysqldump_backup(namespace=namespace,db_name=db_name,password=db_password)
+        create_mysqldump_backup(namespace=lhbe.namespace,db_name=db_name,password=lhbe.db_root_password)
 
         # Create volumes backup suffix 
         backup_name_suffix=datetime.now().strftime("%d-%m-%Y__%H-%M-%S")
@@ -221,21 +141,21 @@ def main():
     ### Backup volumes (Nextcloud volume, actual MariaDB volume, backup MariaDB volume) ###
 
         # Create longhorn nextcloud snapshots and backup
-        create_volume_backup_or_snapshot(backup_type=backup_type, backup_name_suffix=backup_name_suffix, volume_name=nextcloud_volume_name, namespace=namespace)
+        create_volume_backup_or_snapshot(backup_type=lhbe.backup_type, backup_name_suffix=backup_name_suffix, volume_name=lhbe.app_volume_name, namespace=lhbe.namespace)
 
         # Create longhorn MariaDB actual volume snapshots and backup
         create_mariadb_volume_backup_or_snapshot()
 
         # Create longhorn MariaDB backup volume snapshots and backup
-        create_volume_backup_or_snapshot(backup_type=backup_type, backup_name_suffix=backup_name_suffix, volume_name=mysql_backup_volume_name, namespace=namespace)
+        create_volume_backup_or_snapshot(backup_type=lhbe.backup_type, backup_name_suffix=backup_name_suffix, volume_name=lhbe.db_backup_volume_name, namespace=lhbe.namespace)
 
     except BaseException:
         # Exit NextCloud Maintenance Mode
-        exit_maintenance_mode_nextcloud(namespace=namespace,app_name=app_name)
+        exit_maintenance_mode_nextcloud(namespace=lhbe.namespace,app_name=lhbe.app_name)
         exit(1)
 
     # Exit NextCloud Maintenance Mode
-    exit_maintenance_mode_nextcloud(namespace=namespace,app_name=app_name)
+    exit_maintenance_mode_nextcloud(namespace=lhbe.namespace,app_name=lhbe.app_name)
 
     # Clean old backup/snapshot
     clean_old_backup_snapshot()
