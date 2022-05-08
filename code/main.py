@@ -100,7 +100,7 @@ def get_pv_name_by_pvc_name(namespace,pvc_name):
     return pvc.spec.volume_name
 
 #TODO Add backup file path
-def create_mysql_backup(namespace,db_name,password):
+def create_mysqldump_backup(namespace,db_name,password):
     command = "mysqldump --add-drop-database --add-drop-table --lock-all-tables --result-file=backup.sql --password="+password+" --all-databases"
     exec_container_command(namespace=namespace,app_name=db_name,command=command)
 
@@ -121,6 +121,19 @@ def create_volume_backup_or_snapshot(backup_type, backup_name_suffix, volume_nam
         print("Unexpected error.")
         exit_maintenance_mode_nextcloud(namespace=namespace,app_name=app_name)
         exit(7)
+
+
+def create_mariadb_volume_backup_or_snapshot():
+    # Init MariaDB client
+
+    # Block databases for backup
+
+    # Create the snapshot/backup
+
+    # Unblock databases after backup
+
+    # Close MariaDB connections
+    pass
 
 
 def clean_old_backup_snapshot():
@@ -167,24 +180,33 @@ def main():
         print('The NEXTCLOUD_VOLUME_NAME env variable is mandatory.')
         exit(6)
 
-    # Init kubernetes and longhorn clients
+    # Init kubernetes, longhorn and mariadb clients
     init_kubernetes_api()
     init_longhorn_client(longhorn_url=longhorn_url)
 
-    # Start backup process
+    ### Init backup process ###
+
+    # Enter NextCloud Maintenance Mode
     enter_maintenance_mode_nextcloud(namespace=namespace,app_name=app_name)
 
-    # Create DB backup
-    create_mysql_backup(namespace=namespace,db_name=db_name,password=db_password)
+    # Create MariaDB backup
+    create_mysqldump_backup(namespace=namespace,db_name=db_name,password=db_password)
 
     # Create volumes backup suffix 
     backup_name_suffix=datetime.now().strftime("%d-%m-%Y__%H-%M-%S")
 
-    # Create longhorn snapshots and backup
-    create_volume_backup_or_snapshot(backup_type=backup_type, backup_name_suffix=backup_name_suffix, volume_name=mysql_backup_volume_name, namespace=namespace)
+    ### Backup volumes (Nextcloud volume, actual MariaDB volume, backup MariaDB volume) ###
+
+    # Create longhorn nextcloud snapshots and backup
     create_volume_backup_or_snapshot(backup_type=backup_type, backup_name_suffix=backup_name_suffix, volume_name=nextcloud_volume_name, namespace=namespace)
 
-    # Complete backup process
+    # Create longhorn MariaDB actual volume snapshots and backup
+    create_mariadb_volume_backup_or_snapshot()
+
+    # Create longhorn MariaDB backup volume snapshots and backup
+    create_volume_backup_or_snapshot(backup_type=backup_type, backup_name_suffix=backup_name_suffix, volume_name=mysql_backup_volume_name, namespace=namespace)
+
+    # Exit NextCloud Maintenance Mode
     exit_maintenance_mode_nextcloud(namespace=namespace,app_name=app_name)
 
     # Clean old backup/snapshot
@@ -196,3 +218,5 @@ def main():
 if __name__ == '__main__':
     main()
     exit(0)
+
+# TODO Add try-except blocks for each critical third-party interaction to nicely release the resources
