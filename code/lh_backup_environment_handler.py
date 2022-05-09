@@ -15,6 +15,8 @@ class LHBackupEnvironment:
         self.app_volume_name=os.getenv('NEXTCLOUD_VOLUME_NAME')
         self.db_app_name=os.getenv('MARIADB_APP_NAME')
         self.db_root_password=os.getenv('MARIADB_DB_ROOT_PASSWORD')
+        self.db_url=os.getenv('MARIADB_URL')
+        self.db_port=os.getenv('MARIADB_PORT')
         self.db_actual_volume_name=os.getenv('MARIADB_ACTUAL_VOLUME_NAME')
         self.db_backup_volume_name=os.getenv('MARIADB_BACKUP_VOLUME_NAME')
         self.db_backup_file_path=os.getenv('MARIADB_BACKUP_FILE_PATH')
@@ -91,6 +93,30 @@ class LHBackupEnvironment:
         if db_root_password == None:
             raise LHBackupEnvironmentException(message='"MARIADB_DB_ROOT_PASSWORD" environment variable is mandatory')
         self.__db_root_password=db_root_password
+    ### END ###
+
+    ### db_url getter and setter ###
+    @property
+    def db_url(self):
+        return self.__db_url
+    
+    @db_url.setter
+    def db_url(self,db_url):
+        if db_url == None:
+            raise LHBackupEnvironmentException(message='"MARIADB_URL" environment variable is mandatory')
+        self.__db_url=db_url
+    ### END ###
+
+    ### db_port getter and setter ###
+    @property
+    def db_port(self):
+        return self.__db_port
+    
+    @db_port.setter
+    def db_port(self,db_port):
+        if db_port == None:
+            raise LHBackupEnvironmentException(message='"MARIADB_PORT" environment variable is mandatory')
+        self.__db_port=db_port
     ### END ###
 
     ### db_actual_volume_name getter and setter ###

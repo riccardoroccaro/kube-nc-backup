@@ -3,7 +3,6 @@ from time import sleep
 
 from api_instances_handler import ApiInstancesHandler
 from lh_backup_environment_handler import LHBackupEnvironmentException
-from api_instances_handler import ApiInstancesHandlerException
 from lh_backup_environment_handler import LHBackupEnvironment
 
 
