@@ -1,57 +1,15 @@
 from datetime import datetime
 from time import sleep
 
-from kubernetes.client.rest import ApiException
-from kubernetes.stream import stream
-
 from api_instances_handler import ApiInstancesHandler
-from lh_backup_env_handler import LHBackupEnvironmentException
+from lh_backup_environment_handler import LHBackupEnvironmentException
 from api_instances_handler import ApiInstancesHandlerException
-from lh_backup_env_handler import LHBackupEnvironment
+from lh_backup_environment_handler import LHBackupEnvironment
 
 
 # Declaring global const
 ENTER_MAINTENANCE_CMD='runuser -u www-data -- php occ maintenance:mode --on'
 EXIT_MAINTENANCE_CMD='runuser -u www-data -- php occ maintenance:mode --off'
-
-def get_pod_by_label(namespace, app_name):
-    resp = None
-    selector="app="+app_name
-
-    # Retrieving pod and checking that there is just one pod having that lable
-    try:
-        resp = k8s_api_instance.list_namespaced_pod(namespace=namespace, label_selector=selector)
-    except ApiException as e:
-        if e.status != 404:
-            print("Unknown error: %s" % e)
-            exit(1)
-    
-    if (resp is None) or (len(resp.items) != 1):
-        print("There are too many pods with the label " + app_name + " or there isn't any. Just one pod must be present.")
-        exit(1)
-    else:
-        return resp.items.pop()
-
-
-def exec_container_command(namespace, app_name, command):
-    # Retrieving the pod and checking that is in "Running" state
-    pod = get_pod_by_label(namespace=namespace, app_name=app_name)
-    if pod.status.phase != 'Running':
-        print("The pod with label " + app_name + " is not in 'Running' state.")
-        exit(1)
-    
-    # Creating exec command
-    exec_command = ['/bin/bash', '-c', command]
-
-    # Calling exec and waiting for response
-    resp = stream(k8s_api_instance.connect_get_namespaced_pod_exec,
-                  pod.metadata.name,
-                  namespace,
-                  command=exec_command,
-                  stderr=True, stdin=False,
-                  stdout=True, tty=False)
-    return resp
-    
 
 def enter_maintenance_mode_nextcloud(namespace, app_name):
     resp = exec_container_command(namespace=namespace,app_name=app_name, command=ENTER_MAINTENANCE_CMD)
@@ -69,10 +27,6 @@ def exit_maintenance_mode_nextcloud(namespace, app_name):
         print("Error exiting maintenance mode. You have to do it by hands")
         exit(1)
 
-
-def get_pv_name_by_pvc_name(namespace,pvc_name):
-    pvc=k8s_api_instance.read_namespaced_persistent_volume_claim(namespace=namespace, name=pvc_name)
-    return pvc.spec.volume_name
 
 #TODO Add backup file path
 def create_mysqldump_backup(namespace,db_name,password):
