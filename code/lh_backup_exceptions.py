@@ -3,12 +3,16 @@ class LHBackupException(Exception):
         self.message=message
 
     def __str__(self) -> str:
-        return self._message
+        return self.message
 
     @property
     def message(self):
-        return self._message
+        return self.__message
 
     @message.setter
     def message(self,message):
-        self._message=message
+        self.__message=message
+
+class ApiInstancesHandlerException(LHBackupException):
+    def __init__(self,message):
+        super().__init__(message)
