@@ -73,7 +73,7 @@ class MariaDBApiInstanceHandler:
     ### Methods implementation ###
     def exec_sql_command(self, command):
         try:
-            self.cur.execute(command)
+            return self.cur.execute(command)
         except BaseException as e:
             raise MariaDBApiInstanceHandlerException(message="Unable to execute command '" + command + "' . The error message is:\n" + e)
     ### END ###

@@ -66,11 +66,11 @@ class LonghornApiInstanceHandler:
         try:
             volume.snapshotBackup(name=backup_name)
         except BaseException as e:
-            raise LonghornApiInstanceHandlerException(message="Unable to create the backup for the volume " + pvc_name +". The error message is:\n" + e)
+            raise LonghornApiInstanceHandlerException(message="Unable to create the backup for the volume " + pv_name +". The error message is:\n" + e)
 
-# TODO Implement the following methods and update LHBackupEnvironment by adding the retain policies fields
-    def delete_snapshots_over_retain_count():
+# TODO Implement the following methods
+    def delete_snapshots_over_retain_count(self):
         pass
 
-    def delete_backups_over_retain_count():
+    def delete_backups_over_retain_count(self):
         pass

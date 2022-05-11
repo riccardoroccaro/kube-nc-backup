@@ -21,6 +21,8 @@ class LHBackupEnvironment:
         self.db_backup_volume_name=os.getenv('MARIADB_BACKUP_VOLUME_NAME')
         self.db_backup_file_path=os.getenv('MARIADB_BACKUP_FILE_PATH')
         self.longhorn_url=os.getenv('LONGHORN_URL')
+        self.nr_snapshots_to_retain=os.getenv('NR_SNAPSHOTS_TO_RETAIN')
+        self.nr_backups_to_retain=os.getenv('NR_BACKUPS_TO_RETAIN')
         
     ### backup_type getter and setter ###
     @property
@@ -165,4 +167,30 @@ class LHBackupEnvironment:
         if longhorn_url == None:
             raise LHBackupEnvironmentException(message='"LONGHORN_URL" environment variable is mandatory')
         self.__longhorn_url=longhorn_url
+    ### END ###
+
+    ### nr_snapshots_to_retain getter and setter ###
+    @property
+    def nr_snapshots_to_retain(self):
+        return self.__nr_snapshots_to_retain
+    
+    @nr_snapshots_to_retain.setter
+    def nr_snapshots_to_retain(self,nr_snapshots_to_retain):
+        if nr_snapshots_to_retain == None:
+            self.__nr_snapshots_to_retain = 31
+        else:
+            self.__nr_snapshots_to_retain=nr_snapshots_to_retain
+    ### END ###
+
+    ### nr_backups_to_retain getter and setter ###
+    @property
+    def nr_backups_to_retain(self):
+        return self.__nr_backups_to_retain
+    
+    @nr_backups_to_retain.setter
+    def nr_backups_to_retain(self,nr_backups_to_retain):
+        if nr_backups_to_retain == None:
+            self.__nr_backups_to_retain = 4
+        else:
+            self.__nr_backups_to_retain=nr_backups_to_retain
     ### END ###
