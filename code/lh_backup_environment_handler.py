@@ -177,9 +177,12 @@ class LHBackupEnvironment:
     @nr_snapshots_to_retain.setter
     def nr_snapshots_to_retain(self,nr_snapshots_to_retain):
         if nr_snapshots_to_retain == None:
-            self.__nr_snapshots_to_retain = 31
+            self.__nr_snapshots_to_retain = 30
         else:
-            self.__nr_snapshots_to_retain=nr_snapshots_to_retain
+            try:
+                self.__nr_snapshots_to_retain = int(nr_snapshots_to_retain)
+            except (ValueError,TypeError) as e:
+                raise LHBackupEnvironmentException(message="NR_SNAPSHOTS_TO_RETAIN environment variable must be a integer number")
     ### END ###
 
     ### nr_backups_to_retain getter and setter ###
@@ -192,5 +195,8 @@ class LHBackupEnvironment:
         if nr_backups_to_retain == None:
             self.__nr_backups_to_retain = 4
         else:
-            self.__nr_backups_to_retain=nr_backups_to_retain
+            try:
+                self.__nr_backups_to_retain = int(nr_backups_to_retain)
+            except (ValueError,TypeError) as e:
+                raise LHBackupEnvironmentException(message="NR_BACKUPS_TO_RETAIN environment variable must be a integer number")
     ### END ###
