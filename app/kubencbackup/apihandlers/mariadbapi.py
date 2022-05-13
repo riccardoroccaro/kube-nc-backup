@@ -1,7 +1,20 @@
 import mariadb
 
-from lh_backup_exceptions import ApiInstancesHandlerException
+from common.backupexceptions import ApiInstancesHandlerException
+from common.backupexceptions import ApiInstancesConfigException
 
+### Config ###
+class MariaDBApiInstanceConfigException(ApiInstancesConfigException):
+    def __init__(self,message):
+        super().__init__(message)
+
+
+class MariaDBApiInstanceConfig:
+    pass
+
+### END - Config ###
+
+### Handler ###
 class MariaDBApiInstanceHandlerException(ApiInstancesHandlerException):
     def __init__(self,message):
         super().__init__(message)
@@ -77,3 +90,4 @@ class MariaDBApiInstanceHandler:
         except BaseException as e:
             raise MariaDBApiInstanceHandlerException(message="Unable to execute command '" + command + "' . The error message is:\n" + e)
     ### END ###
+### END - Handler ###

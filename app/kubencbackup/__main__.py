@@ -100,5 +100,3 @@ def main():
 if __name__ == '__main__':
     main()
     exit(0)
-
-# TODO Add try-except blocks for each critical third-party interaction to nicely release the resources

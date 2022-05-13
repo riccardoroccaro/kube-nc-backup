@@ -4,8 +4,21 @@ from kubernetes.client.api import core_v1_api
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 
-from lh_backup_exceptions import ApiInstancesHandlerException
+from common.backupexceptions import ApiInstancesHandlerException
+from common.backupexceptions import ApiInstancesConfigException
 
+### Config ###
+class K8sApiInstanceConfigException(ApiInstancesConfigException):
+    def __init__(self,message):
+        super().__init__(message)
+
+
+class K8sApiInstanceConfig:
+    pass
+
+### END - Config ###
+
+### Handler ###
 class K8sApiInstanceHandlerException(ApiInstancesHandlerException):
     def __init__(self,message):
         super().__init__(message)
@@ -48,7 +61,7 @@ class K8sApiInstanceHandler:
     @k8s_api_instance.deleter
     def k8s_api_instance(self):
         self.k8s_api_instance = None
-    ### END ###
+    ### END - k8s_api_instance ###
 
     ### lh_bak_env getter, setter and deleter ###
     @property
@@ -60,7 +73,7 @@ class K8sApiInstanceHandler:
         if lh_bak_env == None:
             raise K8sApiInstanceHandlerException(message="LHBackupEnvironment mustn't be None")
         self.__lh_bak_env=lh_bak_env
-    ### END ###
+    ### END - lh_bak_env ###
 
 
     ### Methods implementation ###
@@ -106,4 +119,6 @@ class K8sApiInstanceHandler:
         except BaseException as e:
             raise K8sApiInstanceHandlerException(message="Unable to execute the command " + command +  ". The call returned this message:\n" + e)
         return resp
-    ### END ###
+    ### END - Methods implementation ###
+
+### END - Handler ###

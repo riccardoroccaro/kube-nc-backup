@@ -1,8 +1,20 @@
 from dateutil.parser import parse as dateutil_parse
 
-import longhorn
+import extlib.longhornlib as longhornlib
 
-from lh_backup_exceptions import ApiInstancesHandlerException
+from common.backupexceptions import ApiInstancesHandlerException
+from common.backupexceptions import ApiInstancesConfigException
+
+### Config ###
+class LonghornApiInstanceConfigException(ApiInstancesConfigException):
+    def __init__(self,message):
+        super().__init__(message)
+
+
+class LonghornApiInstanceConfig:
+    pass
+
+### END - Config ###
 
 class LonghornApiInstanceHandlerException(ApiInstancesHandlerException):
     def __init__(self,message):
@@ -12,7 +24,7 @@ class LonghornApiInstanceHandler:
     def __init__(self, lh_bak_env):
         try:
             self.lh_bak_env=lh_bak_env
-            self.lh_client = longhorn.Client(url=self.lh_bak_env.longhorn_url)
+            self.lh_client = longhornlib.Client(url=self.lh_bak_env.longhorn_url)
         except BaseException as e:
             raise LonghornApiInstanceHandlerException(message="Error creating Longhorn API client instance. The error message is:\n" + e)
 

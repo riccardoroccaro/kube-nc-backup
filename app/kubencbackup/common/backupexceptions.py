@@ -1,4 +1,4 @@
-class LHBackupException(Exception):
+class BackupException(Exception):
     def __init__(self,message):
         self.message=message
 
@@ -13,6 +13,10 @@ class LHBackupException(Exception):
     def message(self,message):
         self.__message=message
 
-class ApiInstancesHandlerException(LHBackupException):
+class ApiInstancesHandlerException(BackupException):
+    def __init__(self,message):
+        super().__init__(message)
+
+class ApiInstancesConfigException(BackupException):
     def __init__(self,message):
         super().__init__(message)
