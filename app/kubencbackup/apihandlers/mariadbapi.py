@@ -1,7 +1,7 @@
 import mariadb
 
-from common.backupexceptions import ApiInstancesHandlerException
-from common.backupexceptions import ApiInstancesConfigException
+from kubencbackup.common.backupexceptions import ApiInstancesHandlerException
+from kubencbackup.common.backupexceptions import ApiInstancesConfigException
 
 ### Config ###
 class MariaDBApiInstanceConfigException(ApiInstancesConfigException):
@@ -10,7 +10,46 @@ class MariaDBApiInstanceConfigException(ApiInstancesConfigException):
 
 
 class MariaDBApiInstanceConfig:
-    pass
+    def __init__(self, db_url, db_port, db_root_password):
+        self.db_root_password=db_root_password
+        self.db_url=db_url
+        self.db_port=db_port
+
+    ### db_root_password getter and setter ###
+    @property
+    def db_root_password(self):
+        return self.__db_root_password
+    
+    @db_root_password.setter
+    def db_root_password(self,db_root_password):
+        if db_root_password == None:
+            raise MariaDBApiInstanceConfigException(message='db_root_password is mandatory')
+        self.__db_root_password=db_root_password
+    ### END ###
+
+    ### db_url getter and setter ###
+    @property
+    def db_url(self):
+        return self.__db_url
+    
+    @db_url.setter
+    def db_url(self,db_url):
+        if db_url == None:
+            raise MariaDBApiInstanceConfigException(message='db_url is mandatory')
+        self.__db_url=db_url
+    ### END ###
+
+    ### db_port getter and setter ###
+    @property
+    def db_port(self):
+        return self.__db_port
+    
+    @db_port.setter
+    def db_port(self,db_port):
+        if db_port == None:
+            raise MariaDBApiInstanceConfigException(message='db_port is mandatory')
+        self.__db_port=db_port
+    ### END ###
 
 ### END - Config ###
 
@@ -18,23 +57,22 @@ class MariaDBApiInstanceConfig:
 class MariaDBApiInstanceHandlerException(ApiInstancesHandlerException):
     def __init__(self,message):
         super().__init__(message)
-
-def init_db_connection(lh_bak_env):
-    # Instantiate Connection
-    try:
-        conn = mariadb.connect(
-            host=lh_bak_env.db_url,
-            port=lh_bak_env.db_port,
-            user="root",
-            password=lh_bak_env.db_root_password,
-            autocommit=True)
-    except mariadb.Error as e:
-        raise MariaDBApiInstanceHandlerException(message="Error connecting to the database:\n" + e)
-    return conn
         
 class MariaDBApiInstanceHandler:
-    def __init__(self, lh_bak_env):
-        self.conn = init_db_connection(lh_bak_env=lh_bak_env)
+    def __init__(self, config):
+        if type(config) != MariaDBApiInstanceConfig:
+            raise MariaDBApiInstanceHandlerException(message="Config type not valid. Must be MariaDBApiInstanceConfig")
+
+        try:
+            self.conn = mariadb.connect(
+                host=config.db_url,
+                port=config.db_port,
+                user="root",
+                password=config.db_root_password,
+                autocommit=True)
+        except mariadb.Error as e:
+            raise MariaDBApiInstanceHandlerException(message="Error connecting to the database:\n" + e)
+        
         try:
             self.cur = self.conn.cursor()
         except BaseException as e:
