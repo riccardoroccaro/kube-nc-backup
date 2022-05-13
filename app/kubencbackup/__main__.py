@@ -1,65 +1,64 @@
 from datetime import datetime
-from time import sleep
+from app.kubencbackup.apphandlers.nextcloudapp import NextcloudAppHandler
 
-from lh_backup_environment_handler import LHBackupEnvironmentException
-from lh_backup_environment_handler import LHBackupEnvironment
+import kubencbackup.common.configextractor as conf_ext
 
-# Declaring class private const
-ENTER_MAINTENANCE_CMD='runuser -u www-data -- php occ maintenance:mode --on'
-EXIT_MAINTENANCE_CMD='runuser -u www-data -- php occ maintenance:mode --off'
-
-
-def enter_nextcloud_maintenance_mode(namespace, app_name):
-    resp = exec_container_command(namespace=namespace,app_name=app_name, command=ENTER_MAINTENANCE_CMD)
-    if resp == "Maintenance mode enabled\n":
-        sleep(30)
-    else:
-        print("Error entering maintenance mode")
-        exit_nextcloud_maintenance_mode(namespace=namespace,app_name=app_name)
-        exit(1)
-
-
-def exit_nextcloud_maintenance_mode(namespace, app_name):
-    resp = exec_container_command(namespace=namespace,app_name=app_name, command=EXIT_MAINTENANCE_CMD)
-    if resp != "Maintenance mode disabled\n":
-        print("Error exiting maintenance mode. You have to do it by hands")
-        exit(1)
-
-
-#TODO Add backup file path
-def create_mysqldump_backup(namespace,db_name,password):
-    command = "mysqldump --add-drop-database --add-drop-table --lock-all-tables --result-file=backup.sql --password="+password+" --all-databases"
-    exec_container_command(namespace=namespace,app_name=db_name,command=command)
-
-
-def create_mariadb_volume_backup_or_snapshot():
-    # Init MariaDB client
-
-    # Block databases for backup
-
-    # Create the snapshot/backup
-
-    # Unblock databases after backup
-
-    # Close MariaDB connections
-    pass
-
-
-def clean_old_backup_snapshot():
-    pass
+from kubencbackup.common.backupconfig import BackupConfigException
+from kubencbackup.common.backupconfig import BackupConfig
+from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceConfigException, K8sApiInstanceHandlerException, K8sApiInstanceHandler
+from kubencbackup.apihandlers.mariadbapi import MariaDBApiInstanceConfigException, MariaDBApiInstanceHandler, MariaDBApiInstanceHandlerException
+from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceConfigException, LonghornApiInstanceHandler, LonghornApiInstanceHandlerException
+from kubencbackup.common.configextractor import ConfigExtractorException
 
 def main():
-    # Init Environment and kubernetes, longhorn and mariadb clients
+    # Init Environment and kubernetes, longhorn and mariadb api handlers
     try:
-        lhbe = LHBackupEnvironment()
-        apis = ApiInstancesHandler(longhorn_url=lhbe.longhorn_url)
-    except LHBackupEnvironmentException as ee:
-        print(ee)
+        backup_config = BackupConfig()
+        k8s_api = K8sApiInstanceHandler(conf_ext.backupconfig_to_k8s_api_instance_config(backup_config))
+        mariadb_api = MariaDBApiInstanceHandler(conf_ext.backupconfig_to_mariadb_api_instance_config(backup_config))
+        longhorn_api = LonghornApiInstanceHandler(conf_ext.backupconfig_to_longhorn_api_instance_config(backup_config))
+    except BackupConfigException as bce:
+        print(bce)
         exit(1)
-    except ApiInstancesHandlerException as ae:
-        print(ae)
-        del(apis)
+    except K8sApiInstanceHandlerException as kaihe:
+        print(kaihe)
+        del(k8s_api)
         exit(1)
+    except MariaDBApiInstanceHandlerException as maihe:
+        print(maihe)
+        del(k8s_api)
+        del(mariadb_api)
+        exit(1)
+    except LonghornApiInstanceHandlerException as laihe:
+        print(laihe)
+        del(k8s_api)
+        del(mariadb_api)
+        del(longhorn_api)
+        exit(1)
+    except (ConfigExtractorException, 
+            K8sApiInstanceConfigException, 
+            MariaDBApiInstanceConfigException,
+            LonghornApiInstanceConfigException) as misc_e:
+        if ('k8s_api' in locals()) and (k8s_api != None):
+            del(k8s_api)
+        if ('mariadb_api' in locals()) and (mariadb_api != None):
+            del(mariadb_api)
+        if ('longhorn_api' in locals()) and (longhorn_api != None):
+            del(longhorn_api)
+        print(misc_e)
+        exit(1)
+
+    # Init Apps handlers
+    try:
+        nextcloud_app = NextcloudAppHandler(
+            config=conf_ext.backupconfig_to_nextcloud_app_config(backup_config)
+        )
+    except:
+        pass
+
+
+
+##########################################################################################################################################
 
     ### Init backup process ###
     try:
