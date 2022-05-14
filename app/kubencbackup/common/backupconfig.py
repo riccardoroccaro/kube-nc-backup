@@ -1,13 +1,17 @@
 import os
 
-from lh_backup_exceptions import LHBackupException
+from backupexceptions import BackupException
 
-class LHBackupEnvironmentException(LHBackupException):
+class BackupConfigException(BackupException):
     def __init__(self,message):
         super().__init__(message)
 
 
-class LHBackupEnvironment:
+class BackupConfig:
+    DEFAULT_NAMESPACE = 'default'
+    DEFAULT_SNAPSHOTS_TO_RETAIN = 30
+    DEFAULT_BACKUPS_TO_RETAIN = 4
+
     def __init__(self):
         self.backup_type=os.getenv('BACKUP_TYPE')
         self.namespace=os.getenv('NAMESPACE')
@@ -32,7 +36,7 @@ class LHBackupEnvironment:
     @backup_type.setter
     def backup_type(self,backup_type):
         if backup_type not in ['FULL-BACKUP', 'SNAPSHOT']:
-            raise LHBackupEnvironmentException(message='Wrong backup type. "BACKUP_TYPE" environment variable is mandatory and must be either "FULL_BACKUP" or "SNAPSHOT"')
+            raise BackupConfigException(message='Wrong backup type. "BACKUP_TYPE" environment variable is mandatory and must be either "FULL_BACKUP" or "SNAPSHOT"')
         self.__backup_type=backup_type
     ### END ###
 
@@ -44,7 +48,7 @@ class LHBackupEnvironment:
     @namespace.setter
     def namespace(self,namespace):
         if namespace == None:
-            self.__namespace = 'default'
+            self.__namespace = BackupConfig.DEFAULT_NAMESPACE
         else:
             self.__namespace=namespace
     ### END ###
@@ -57,7 +61,7 @@ class LHBackupEnvironment:
     @app_name.setter
     def app_name(self,app_name):
         if app_name == None:
-            raise LHBackupEnvironmentException(message='"NEXTCLOUD_APP_NAME" environment variable is mandatory')
+            raise BackupConfigException(message='"NEXTCLOUD_APP_NAME" environment variable is mandatory')
         self.__app_name=app_name
     ### END ###
 
@@ -69,7 +73,7 @@ class LHBackupEnvironment:
     @app_volume_name.setter
     def app_volume_name(self,app_volume_name):
         if app_volume_name == None:
-            raise LHBackupEnvironmentException(message='"NEXTCLOUD_VOLUME_NAME" environment variable is mandatory')
+            raise BackupConfigException(message='"NEXTCLOUD_VOLUME_NAME" environment variable is mandatory')
         self.__app_volume_name=app_volume_name
     ### END ###
 
@@ -81,7 +85,7 @@ class LHBackupEnvironment:
     @db_app_name.setter
     def db_app_name(self,db_app_name):
         if db_app_name == None:
-            raise LHBackupEnvironmentException(message='"MARIADB_APP_NAME" environment variable is mandatory')
+            raise BackupConfigException(message='"MARIADB_APP_NAME" environment variable is mandatory')
         self.__db_app_name=db_app_name
     ### END ###
 
@@ -93,7 +97,7 @@ class LHBackupEnvironment:
     @db_root_password.setter
     def db_root_password(self,db_root_password):
         if db_root_password == None:
-            raise LHBackupEnvironmentException(message='"MARIADB_DB_ROOT_PASSWORD" environment variable is mandatory')
+            raise BackupConfigException(message='"MARIADB_DB_ROOT_PASSWORD" environment variable is mandatory')
         self.__db_root_password=db_root_password
     ### END ###
 
@@ -105,7 +109,7 @@ class LHBackupEnvironment:
     @db_url.setter
     def db_url(self,db_url):
         if db_url == None:
-            raise LHBackupEnvironmentException(message='"MARIADB_URL" environment variable is mandatory')
+            raise BackupConfigException(message='"MARIADB_URL" environment variable is mandatory')
         self.__db_url=db_url
     ### END ###
 
@@ -117,7 +121,7 @@ class LHBackupEnvironment:
     @db_port.setter
     def db_port(self,db_port):
         if db_port == None:
-            raise LHBackupEnvironmentException(message='"MARIADB_PORT" environment variable is mandatory')
+            raise BackupConfigException(message='"MARIADB_PORT" environment variable is mandatory')
         self.__db_port=db_port
     ### END ###
 
@@ -129,7 +133,7 @@ class LHBackupEnvironment:
     @db_actual_volume_name.setter
     def db_actual_volume_name(self,db_actual_volume_name):
         if db_actual_volume_name == None:
-            raise LHBackupEnvironmentException(message='"MARIADB_ACTUAL_VOLUME_NAME" environment variable is mandatory')
+            raise BackupConfigException(message='"MARIADB_ACTUAL_VOLUME_NAME" environment variable is mandatory')
         self.__db_actual_volume_name=db_actual_volume_name
     ### END ###
     
@@ -141,7 +145,7 @@ class LHBackupEnvironment:
     @db_backup_volume_name.setter
     def db_backup_volume_name(self,db_backup_volume_name):
         if db_backup_volume_name == None:
-            raise LHBackupEnvironmentException(message='"MARIADB_BACKUP_VOLUME_NAME" environment variable is mandatory')
+            raise BackupConfigException(message='"MARIADB_BACKUP_VOLUME_NAME" environment variable is mandatory')
         self.__db_backup_volume_name=db_backup_volume_name
     ### END ###
     
@@ -153,7 +157,7 @@ class LHBackupEnvironment:
     @db_backup_file_path.setter
     def db_backup_file_path(self,db_backup_file_path):
         if db_backup_file_path == None:
-            raise LHBackupEnvironmentException(message='"MARIADB_BACKUP_FILE_PATH" environment variable is mandatory')
+            raise BackupConfigException(message='"MARIADB_BACKUP_FILE_PATH" environment variable is mandatory')
         self.__db_backup_file_path=db_backup_file_path
     ### END ###
     
@@ -165,7 +169,7 @@ class LHBackupEnvironment:
     @longhorn_url.setter
     def longhorn_url(self,longhorn_url):
         if longhorn_url == None:
-            raise LHBackupEnvironmentException(message='"LONGHORN_URL" environment variable is mandatory')
+            raise BackupConfigException(message='"LONGHORN_URL" environment variable is mandatory')
         self.__longhorn_url=longhorn_url
     ### END ###
 
@@ -177,12 +181,12 @@ class LHBackupEnvironment:
     @nr_snapshots_to_retain.setter
     def nr_snapshots_to_retain(self,nr_snapshots_to_retain):
         if nr_snapshots_to_retain == None:
-            self.__nr_snapshots_to_retain = 30
+            self.__nr_snapshots_to_retain = BackupConfig.DEFAULT_SNAPSHOTS_TO_RETAIN
         else:
             try:
                 self.__nr_snapshots_to_retain = int(nr_snapshots_to_retain)
             except (ValueError,TypeError) as e:
-                raise LHBackupEnvironmentException(message="NR_SNAPSHOTS_TO_RETAIN environment variable must be a integer number")
+                raise BackupConfigException(message="NR_SNAPSHOTS_TO_RETAIN environment variable must be a integer number")
     ### END ###
 
     ### nr_backups_to_retain getter and setter ###
@@ -193,10 +197,10 @@ class LHBackupEnvironment:
     @nr_backups_to_retain.setter
     def nr_backups_to_retain(self,nr_backups_to_retain):
         if nr_backups_to_retain == None:
-            self.__nr_backups_to_retain = 4
+            self.__nr_backups_to_retain = BackupConfig.DEFAULT_BACKUPS_TO_RETAIN
         else:
             try:
                 self.__nr_backups_to_retain = int(nr_backups_to_retain)
             except (ValueError,TypeError) as e:
-                raise LHBackupEnvironmentException(message="NR_BACKUPS_TO_RETAIN environment variable must be a integer number")
+                raise BackupConfigException(message="NR_BACKUPS_TO_RETAIN environment variable must be a integer number")
     ### END ###

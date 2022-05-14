@@ -4,36 +4,72 @@ from kubernetes.client.api import core_v1_api
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 
-from lh_backup_exceptions import ApiInstancesHandlerException
+from kubencbackup.common.backupexceptions import ApiInstancesHandlerException
+from kubencbackup.common.backupexceptions import ApiInstancesConfigException
+from kubencbackup.common.backupconfig import BackupConfig
 
-class K8sApiInstanceHandlerException(ApiInstancesHandlerException):
+### Config ###
+class K8sApiInstanceConfigException(ApiInstancesConfigException):
     def __init__(self,message):
         super().__init__(message)
 
 
-def init_k8s_api_instance():
-    # Load and set KUBECONFIG
-    config.load_kube_config()
-    try:
-        c = Configuration().get_default_copy()
-    except AttributeError:
-        c = Configuration()
-        c.assert_hostname = False
-    Configuration.set_default(c)
+class K8sApiInstanceConfig:
+    def __init__(self, namespace):
+        self.namespace=namespace
 
-    return core_v1_api.CoreV1Api()
+    ### namespace getter and setter ###
+    @property
+    def namespace(self):
+        return self.__namespace
+    
+    @namespace.setter
+    def namespace(self,namespace):
+        if namespace == None:
+            self.__namespace = BackupConfig.DEFAULT_NAMESPACE
+        else:
+            self.__namespace=namespace
+    ### END ###
+        
+### END - Config ###
+
+### Handler ###
+class K8sApiInstanceHandlerException(ApiInstancesHandlerException):
+    def __init__(self,message):
+        super().__init__(message)
 
 class K8sApiInstanceHandler:
-    def __init__(self,lh_bak_env):
+    def __init__(self,conf):
         try:
-            self.k8s_api_instance = init_k8s_api_instance()
-            self.lh_bak_env=lh_bak_env
+            self.conf=conf
         except BaseException:
-            del(self.k8s_api_instance)
             raise K8sApiInstanceHandlerException(message="Error creating Kubernetes API client instance")
             
+    def __enter__(self):
+        try:
+            # Load and set KUBECONFIG
+            config.load_kube_config()
+            try:
+                c = Configuration().get_default_copy()
+            except AttributeError:
+                c = Configuration()
+                c.assert_hostname = False
+            Configuration.set_default(c)
+
+            self.k8s_api_instance = core_v1_api.CoreV1Api()
+        except BaseException:
+            self.free_resources()
+            raise K8sApiInstanceHandlerException(message="Error creating Kubernetes API client instance")
+        
+        return self
+
+    def __exit__(self, *a):
+        self.free_resources()
 
     def __del__(self):
+        self.free_resources()
+
+    def free_resources(self):
         del(self.k8s_api_instance)
 
     ### k8s_api_instance getter, setter and deleter ###
@@ -47,20 +83,21 @@ class K8sApiInstanceHandler:
 
     @k8s_api_instance.deleter
     def k8s_api_instance(self):
+        del(self.__k8s_api_instance)
         self.k8s_api_instance = None
-    ### END ###
+    ### END - k8s_api_instance ###
 
-    ### lh_bak_env getter, setter and deleter ###
+    ### conf getter, setter and deleter ###
     @property
-    def lh_bak_env(self):
-        return self.__lh_bak_env
+    def conf(self):
+        return self.__conf
     
-    @lh_bak_env.setter
-    def lh_bak_env(self, lh_bak_env):
-        if lh_bak_env == None:
-            raise K8sApiInstanceHandlerException(message="LHBackupEnvironment mustn't be None")
-        self.__lh_bak_env=lh_bak_env
-    ### END ###
+    @conf.setter
+    def conf(self, conf):
+        if conf == None or type(conf) != K8sApiInstanceConfig:
+            raise K8sApiInstanceHandlerException(message="conf mustn't be None and must be a K8sApiInstanceConfig instance")
+        self.__conf=conf
+    ### END - conf ###
 
 
     ### Methods implementation ###
@@ -69,7 +106,7 @@ class K8sApiInstanceHandler:
 
         # Retrieving pod and checking that there is just one pod having that label
         try:
-            resp = self.k8s_api_instance.list_namespaced_pod(namespace=self.lh_bak_env.namespace, label_selector=label)
+            resp = self.k8s_api_instance.list_namespaced_pod(namespace=self.conf.namespace, label_selector=label)
         except ApiException as e:
             if e.status != 404:
                 raise K8sApiInstanceHandlerException(message="Unknown error: "+e)
@@ -81,7 +118,7 @@ class K8sApiInstanceHandler:
     
     def get_pv_name_from_pvc_name(self,pvc_name):
         try:
-            pvc=self.k8s_api_instance.read_namespaced_persistent_volume_claim(namespace=self.lh_bak_env.namespace, name=pvc_name)
+            pvc=self.k8s_api_instance.read_namespaced_persistent_volume_claim(namespace=self.conf.namespace, name=pvc_name)
         except BaseException:
             raise K8sApiInstanceHandlerException(message="Error retrieving Persistent Volume name from Persistent Volume Claim "+ pvc_name)
         return pvc.spec.volume_name
@@ -99,11 +136,13 @@ class K8sApiInstanceHandler:
         try: 
             resp = stream(self.k8s_api_instance.connect_get_namespaced_pod_exec,
                         pod.metadata.name,
-                        namespace=self.lh_bak_env.namespace,
+                        namespace=self.conf.namespace,
                         command=exec_command,
                         stderr=True, stdin=False,
                         stdout=True, tty=False)
         except BaseException as e:
             raise K8sApiInstanceHandlerException(message="Unable to execute the command " + command +  ". The call returned this message:\n" + e)
         return resp
-    ### END ###
+    ### END - Methods implementation ###
+
+### END - Handler ###
