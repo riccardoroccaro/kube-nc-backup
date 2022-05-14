@@ -103,9 +103,20 @@ class MariaDBAppHandler:
         self.mariadb_api=mariadb_api
         self.longhorn_api=longhorn_api
 
+    def __enter__(self):
+        try:
+            self.enter_backup_mode()
+        except MariaDBAppHandlerException as e:
+            self.exit_backup_mode()
+            raise MariaDBAppHandlerException(message=e.message)
+
+        return self
+
+    def __exit__(self, *a):
+        self.exit_backup_mode()
+
     def __del__(self):
         self.exit_backup_mode()
-        pass
 
     ### config getter and setter ###
     @property

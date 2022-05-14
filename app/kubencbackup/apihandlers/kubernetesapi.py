@@ -6,6 +6,7 @@ from kubernetes.stream import stream
 
 from kubencbackup.common.backupexceptions import ApiInstancesHandlerException
 from kubencbackup.common.backupexceptions import ApiInstancesConfigException
+from kubencbackup.common.backupconfig import BackupConfig
 
 ### Config ###
 class K8sApiInstanceConfigException(ApiInstancesConfigException):
@@ -25,7 +26,7 @@ class K8sApiInstanceConfig:
     @namespace.setter
     def namespace(self,namespace):
         if namespace == None:
-            self.__namespace = 'default'
+            self.__namespace = BackupConfig.DEFAULT_NAMESPACE
         else:
             self.__namespace=namespace
     ### END ###
@@ -37,30 +38,38 @@ class K8sApiInstanceHandlerException(ApiInstancesHandlerException):
     def __init__(self,message):
         super().__init__(message)
 
-
-def init_k8s_api_instance():
-    # Load and set KUBECONFIG
-    config.load_kube_config()
-    try:
-        c = Configuration().get_default_copy()
-    except AttributeError:
-        c = Configuration()
-        c.assert_hostname = False
-    Configuration.set_default(c)
-
-    return core_v1_api.CoreV1Api()
-
 class K8sApiInstanceHandler:
     def __init__(self,conf):
         try:
-            self.k8s_api_instance = init_k8s_api_instance()
             self.conf=conf
         except BaseException:
-            del(self.k8s_api_instance)
             raise K8sApiInstanceHandlerException(message="Error creating Kubernetes API client instance")
             
+    def __enter__(self):
+        try:
+            # Load and set KUBECONFIG
+            config.load_kube_config()
+            try:
+                c = Configuration().get_default_copy()
+            except AttributeError:
+                c = Configuration()
+                c.assert_hostname = False
+            Configuration.set_default(c)
+
+            self.k8s_api_instance = core_v1_api.CoreV1Api()
+        except BaseException:
+            self.free_resources()
+            raise K8sApiInstanceHandlerException(message="Error creating Kubernetes API client instance")
+        
+        return self
+
+    def __exit__(self, *a):
+        self.free_resources()
 
     def __del__(self):
+        self.free_resources()
+
+    def free_resources(self):
         del(self.k8s_api_instance)
 
     ### k8s_api_instance getter, setter and deleter ###
@@ -74,6 +83,7 @@ class K8sApiInstanceHandler:
 
     @k8s_api_instance.deleter
     def k8s_api_instance(self):
+        del(self.__k8s_api_instance)
         self.k8s_api_instance = None
     ### END - k8s_api_instance ###
 

@@ -60,28 +60,51 @@ class MariaDBApiInstanceHandlerException(ApiInstancesHandlerException):
         
 class MariaDBApiInstanceHandler:
     def __init__(self, config):
-        if type(config) != MariaDBApiInstanceConfig:
-            raise MariaDBApiInstanceHandlerException(message="Config type not valid. Must be MariaDBApiInstanceConfig")
+        if config == None or type(config) != MariaDBApiInstanceConfig:
+            raise MariaDBApiInstanceHandlerException(message="Config type not valid. Must be MariaDBApiInstanceConfig and not None")
 
+        self.__config=config
+
+    def __enter__(self):
         try:
             self.conn = mariadb.connect(
-                host=config.db_url,
-                port=config.db_port,
+                host=self.__config.db_url,
+                port=self.__config.db_port,
                 user="root",
-                password=config.db_root_password,
+                password=self.__config.db_root_password,
                 autocommit=True)
         except mariadb.Error as e:
-            raise MariaDBApiInstanceHandlerException(message="Error connecting to the database:\n" + e)
+            raise MariaDBApiInstanceHandlerException(message="Error connecting to the database. The error message is:\n" + e)
         
         try:
             self.cur = self.conn.cursor()
         except BaseException as e:
-            del(self.conn)
+            self.clean_conn()
             raise MariaDBApiInstanceHandlerException(message="Unable to retrieve the cursor. The error message is:\n" + e)
 
+        return self
+
+    def __exit__(self, *a):
+        self.clean_resources()
+
     def __del__(self):       
-        del(self.cur)
-        del(self.conn)
+        self.clean_resources()
+
+    def clean_resources(self):
+        self.clean_cur()
+        self.clean_conn()
+
+    def clean_cur(self):
+        try:
+            self.cur.close()
+        except BaseException as e:
+            print(e)
+
+    def clean_conn(self):
+        try:
+            self.conn.close()
+        except BaseException as e:
+            print(e)
 
    ### conn getter and setter ###
     @property
@@ -97,7 +120,7 @@ class MariaDBApiInstanceHandler:
     
     @conn.deleter
     def conn(self):
-        self.conn.close()
+        self.clean_conn()
         del(self.__conn)
         self.conn = None
     ### END ###
@@ -116,7 +139,7 @@ class MariaDBApiInstanceHandler:
     
     @cur.deleter
     def cur(self):
-        self.cur.close()
+        self.clean_cur()
         del(self.__cur)
         self.cur = None
     ### END ###

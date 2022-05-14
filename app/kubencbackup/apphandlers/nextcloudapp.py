@@ -60,8 +60,26 @@ class NextcloudAppHandler:
         self.k8s_api=k8s_api
         self.longhorn_api=longhorn_api
 
+    def __enter__(self):
+        try:
+            self.enter_maintenance_mode()
+        except NextcloudAppHandlerException as e:
+            self.exit_maintenance_mode()
+            raise NextcloudAppHandlerException(message=e.message)
+
+        return self
+
+    def __exit__(self, *a):
+        try:
+            self.exit_maintenance_mode()
+        except NextcloudAppHandlerException as e:
+            print (e)
+
     def __del__(self):
-        self.exit_maintenance_mode()
+        try:
+            self.exit_maintenance_mode()
+        except NextcloudAppHandlerException as e:
+            print (e)
     
     ### config getter and setter ###
     @property

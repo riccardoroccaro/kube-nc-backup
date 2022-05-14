@@ -8,6 +8,10 @@ class BackupConfigException(BackupException):
 
 
 class BackupConfig:
+    DEFAULT_NAMESPACE = 'default'
+    DEFAULT_SNAPSHOTS_TO_RETAIN = 30
+    DEFAULT_BACKUPS_TO_RETAIN = 4
+
     def __init__(self):
         self.backup_type=os.getenv('BACKUP_TYPE')
         self.namespace=os.getenv('NAMESPACE')
@@ -44,7 +48,7 @@ class BackupConfig:
     @namespace.setter
     def namespace(self,namespace):
         if namespace == None:
-            self.__namespace = 'default'
+            self.__namespace = BackupConfig.DEFAULT_NAMESPACE
         else:
             self.__namespace=namespace
     ### END ###
@@ -177,7 +181,7 @@ class BackupConfig:
     @nr_snapshots_to_retain.setter
     def nr_snapshots_to_retain(self,nr_snapshots_to_retain):
         if nr_snapshots_to_retain == None:
-            self.__nr_snapshots_to_retain = 30
+            self.__nr_snapshots_to_retain = BackupConfig.DEFAULT_SNAPSHOTS_TO_RETAIN
         else:
             try:
                 self.__nr_snapshots_to_retain = int(nr_snapshots_to_retain)
@@ -193,7 +197,7 @@ class BackupConfig:
     @nr_backups_to_retain.setter
     def nr_backups_to_retain(self,nr_backups_to_retain):
         if nr_backups_to_retain == None:
-            self.__nr_backups_to_retain = 4
+            self.__nr_backups_to_retain = BackupConfig.DEFAULT_BACKUPS_TO_RETAIN
         else:
             try:
                 self.__nr_backups_to_retain = int(nr_backups_to_retain)

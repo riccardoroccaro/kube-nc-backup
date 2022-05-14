@@ -4,6 +4,7 @@ import kubencbackup.extlib.longhornlib as longhornlib
 
 from kubencbackup.common.backupexceptions import ApiInstancesHandlerException
 from kubencbackup.common.backupexceptions import ApiInstancesConfigException
+from kubencbackup.common.backupconfig import BackupConfig
 
 ### Config ###
 class LonghornApiInstanceConfigException(ApiInstancesConfigException):
@@ -37,7 +38,7 @@ class LonghornApiInstanceConfig:
     @nr_snapshots_to_retain.setter
     def nr_snapshots_to_retain(self,nr_snapshots_to_retain):
         if nr_snapshots_to_retain == None:
-            self.__nr_snapshots_to_retain = 30
+            self.__nr_snapshots_to_retain = BackupConfig.DEFAULT_SNAPSHOTS_TO_RETAIN
         else:
             try:
                 self.__nr_snapshots_to_retain = int(nr_snapshots_to_retain)
@@ -53,7 +54,7 @@ class LonghornApiInstanceConfig:
     @nr_backups_to_retain.setter
     def nr_backups_to_retain(self,nr_backups_to_retain):
         if nr_backups_to_retain == None:
-            self.__nr_backups_to_retain = 4
+            self.__nr_backups_to_retain = BackupConfig.DEFAULT_BACKUPS_TO_RETAIN
         else:
             try:
                 self.__nr_backups_to_retain = int(nr_backups_to_retain)
@@ -72,15 +73,24 @@ class LonghornApiInstanceHandler:
     def __init__(self, config):
         if type(config) != LonghornApiInstanceConfig:
             raise LonghornApiInstanceHandlerException(message="config must be of type LonghornApiInstanceConfig")
-        
         self.config=config
 
+    def __enter__(self):
         try:
             self.client = longhornlib.Client(url=self.config.longhorn_url)
         except BaseException as e:
+            self.free_resources()
             raise LonghornApiInstanceHandlerException(message="Error creating Longhorn API client instance. The error message is:\n" + e)
 
+        return self
+
+    def __exit__(self, *a):
+        self.free_resources()
+
     def __del__(self):
+        self.free_resources()
+
+    def free_resources(self):
         del(self.client)
 
     ### client getter, setter and deleter ###
@@ -96,7 +106,7 @@ class LonghornApiInstanceHandler:
 
     @client.deleter
     def client(self):
-        self.client = None
+        del(self.__client)
     ### END ###
 
     ### config getter, setter and deleter ###
@@ -106,8 +116,8 @@ class LonghornApiInstanceHandler:
     
     @config.setter
     def config(self, config):
-        if config == None:
-            raise LonghornApiInstanceHandlerException(message="LHBackupEnvironment mustn't be None")
+        if config == None or type(config) != LonghornApiInstanceConfig:
+            raise LonghornApiInstanceHandlerException(message="config mustn't be None and must be of type LonghornApiInstanceConfig")
         self.__config=config
     ### END ###
 
