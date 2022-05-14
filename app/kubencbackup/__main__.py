@@ -1,101 +1,88 @@
 from datetime import datetime
-from app.kubencbackup.apphandlers.nextcloudapp import NextcloudAppHandler
-
-import kubencbackup.common.configextractor as conf_ext
 
 from kubencbackup.common.backupconfig import BackupConfigException
 from kubencbackup.common.backupconfig import BackupConfig
-from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceConfigException, K8sApiInstanceHandlerException, K8sApiInstanceHandler
-from kubencbackup.apihandlers.mariadbapi import MariaDBApiInstanceConfigException, MariaDBApiInstanceHandler, MariaDBApiInstanceHandlerException
-from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceConfigException, LonghornApiInstanceHandler, LonghornApiInstanceHandlerException
-from kubencbackup.common.configextractor import ConfigExtractorException
+from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceHandler
+from kubencbackup.apihandlers.mariadbapi import MariaDBApiInstanceHandler
+from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceHandler
+
+import kubencbackup.common.configextractor as conf_ext
+
+from kubencbackup.common.backupexceptions import AppHandlerException, BackupException
+from kubencbackup.apphandlers.nextcloudapp import NextcloudAppHandler
+from kubencbackup.apphandlers.mariadbapp import MariaDBAppHandler
 
 def main():
-    # Init Environment and kubernetes, longhorn and mariadb api handlers
+    # Init BackupConfig
     try:
         backup_config = BackupConfig()
-        k8s_api = K8sApiInstanceHandler(conf_ext.backupconfig_to_k8s_api_instance_config(backup_config))
-        mariadb_api = MariaDBApiInstanceHandler(conf_ext.backupconfig_to_mariadb_api_instance_config(backup_config))
-        longhorn_api = LonghornApiInstanceHandler(conf_ext.backupconfig_to_longhorn_api_instance_config(backup_config))
     except BackupConfigException as bce:
         print(bce)
         exit(1)
-    except K8sApiInstanceHandlerException as kaihe:
-        print(kaihe)
-        del(k8s_api)
-        exit(1)
-    except MariaDBApiInstanceHandlerException as maihe:
-        print(maihe)
-        del(k8s_api)
-        del(mariadb_api)
-        exit(1)
-    except LonghornApiInstanceHandlerException as laihe:
-        print(laihe)
-        del(k8s_api)
-        del(mariadb_api)
-        del(longhorn_api)
-        exit(1)
-    except (ConfigExtractorException, 
-            K8sApiInstanceConfigException, 
-            MariaDBApiInstanceConfigException,
-            LonghornApiInstanceConfigException) as misc_e:
-        if ('k8s_api' in locals()) and (k8s_api != None):
-            del(k8s_api)
-        if ('mariadb_api' in locals()) and (mariadb_api != None):
-            del(mariadb_api)
-        if ('longhorn_api' in locals()) and (longhorn_api != None):
-            del(longhorn_api)
-        print(misc_e)
-        exit(1)
 
-    # Init Apps handlers
+    # Init kubernetes, longhorn and mariadb api handlers with their correspondent connections
     try:
-        nextcloud_app = NextcloudAppHandler(
-            config=conf_ext.backupconfig_to_nextcloud_app_config(backup_config)
-        )
-    except:
-        pass
+        with \
+            K8sApiInstanceHandler(conf_ext.backupconfig_to_k8s_api_instance_config(backup_config)) as k8s_api, \
+            MariaDBApiInstanceHandler(conf_ext.backupconfig_to_mariadb_api_instance_config(backup_config)) as mariadb_api, \
+            LonghornApiInstanceHandler(conf_ext.backupconfig_to_longhorn_api_instance_config(backup_config)) as longhorn_api:
 
+            # Create nextcloud app handler and automatically enter maintenance mode
+            with NextcloudAppHandler(config=conf_ext.backupconfig_to_nextcloud_app_config(backup_config),k8s_api=k8s_api,longhorn_api=longhorn_api) as ncah:
+                # Create mysqldump file
+                try:
+                    MariaDBAppHandler(
+                        config=conf_ext.backupconfig_to_mariadb_app_config(backup_config),
+                        k8s_api=k8s_api,
+                        mariadb_api=mariadb_api,
+                        longhorn_api=longhorn_api).create_mariadb_mysqldump()
+                except BackupException as e:
+                    print(e)
+                    return 1
 
+                # Create mariadb app handler and automatically enter backup mode
+                with MariaDBAppHandler(config=conf_ext.backupconfig_to_mariadb_app_config(backup_config),k8s_api=k8s_api,mariadb_api=mariadb_api,longhorn_api=longhorn_api) as mdbah:
+                    # Set snapshots and backups name
+                    snapshot_backup_name=datetime.now().strftime("%d-%m-%Y__%H-%M-%S")
+                    
+                    try:
+                        # Create nextcloud snapshot
+                        ncah.create_volume_snapshot(snapshot_name=snapshot_backup_name)
 
-##########################################################################################################################################
+                        # Create mariadb actual volume snapshot
+                        mdbah.create_actual_volume_snapshot(snapshot_name=snapshot_backup_name)
 
-    ### Init backup process ###
-    try:
-        # Enter NextCloud Maintenance Mode
-        enter_nextcloud_maintenance_mode(namespace=lhbe.namespace,app_name=lhbe.app_name)
+                        # Create mariadb backup volume snapshot
+                        mdbah.create_backup_volume_snapshot(snapshot_name=snapshot_backup_name)
 
-        # Create MariaDB backup
-        create_mysqldump_backup(namespace=lhbe.namespace,db_name=db_name,password=lhbe.db_root_password)
+                        # Check whether a simple snapshot or a backup too have to be done
+                        if backup_config.backup_type == "FULL_BACKUP":
+                            # Create nextcloud backup
+                            ncah.create_volume_backup(snapshot_name=snapshot_backup_name)
 
-        # Create volumes backup suffix 
-        backup_name_suffix=datetime.now().strftime("%d-%m-%Y__%H-%M-%S")
+                            # Create mariadb actual volume backup
+                            mdbah.create_actual_volume_backup(snapshot_name=snapshot_backup_name)
 
-    ### Backup volumes (Nextcloud volume, actual MariaDB volume, backup MariaDB volume) ###
+                            # Create mariadb backup volume backup
+                            mdbah.create_backup_volume_backup(snapshot_name=snapshot_backup_name)
 
-        # Create longhorn nextcloud snapshots and backup
-        create_volume_backup_or_snapshot(backup_type=lhbe.backup_type, backup_name_suffix=backup_name_suffix, volume_name=lhbe.app_volume_name, namespace=lhbe.namespace)
+                        # Cleanup nextcloud old snapshots and backups
+                        ncah.delete_backups_and_snapshots_over_retain_count()
 
-        # Create longhorn MariaDB actual volume snapshots and backup
-        create_mariadb_volume_backup_or_snapshot()
+                        # Cleanup mariadb old snapshots and backups
+                        mdbah.delete_backups_and_snapshots_over_retain_count()
 
-        # Create longhorn MariaDB backup volume snapshots and backup
-        create_volume_backup_or_snapshot(backup_type=lhbe.backup_type, backup_name_suffix=backup_name_suffix, volume_name=lhbe.db_backup_volume_name, namespace=lhbe.namespace)
-
-    except BaseException:
-        # Exit NextCloud Maintenance Mode
-        exit_nextcloud_maintenance_mode(namespace=lhbe.namespace,app_name=lhbe.app_name)
-        exit(1)
-
-    # Exit NextCloud Maintenance Mode
-    exit_nextcloud_maintenance_mode(namespace=lhbe.namespace,app_name=lhbe.app_name)
-
-    # Clean old backup/snapshot
-    clean_old_backup_snapshot()
+                    except AppHandlerException as ahe:
+                        print(e)
+                        return 1
+            # The resources will be freed and the correspondent connections closed through the 'with' statement
+        # The resources will be freed and the correspondent connections closed through the 'with' statement
+    except BackupException as e:
+        print(e)
+        return 1
 
     return 0
 
 
 if __name__ == '__main__':
-    main()
-    exit(0)
+    exit(main())

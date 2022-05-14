@@ -91,7 +91,7 @@ class MariaDBAppHandlerException(AppHandlerException):
 class MariaDBAppHandler:
     __BACKUP_STAGE_START_CMD="BACKUP STAGE START"
     __BACKUP_STAGE_BLOCK_COMMIT_CMD="BACKUP STAGE BLOCK_COMMIT"
-    __BACKUP_STAGE_END_CMD="BACKUP STAGE BLOCK_COMMIT"
+    __BACKUP_STAGE_END_CMD="BACKUP STAGE END"
 
     __PASSWORD_ESCAPE="____PASSWORD____"
     __FILE_PATH_ESCAPE="____FILE_PATH____"
@@ -102,6 +102,8 @@ class MariaDBAppHandler:
         self.k8s_api=k8s_api
         self.mariadb_api=mariadb_api
         self.longhorn_api=longhorn_api
+
+        self.__backup_mode=False
 
     def __enter__(self):
         try:
@@ -183,15 +185,19 @@ class MariaDBAppHandler:
     def enter_backup_mode(self):
         try:
 ## TODO Controllare cosa ritornano queste query per fare un controllo ed eventualmente lanciare una eccezione
-            res = self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_START_CMD)
-            res = self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_BLOCK_COMMIT_CMD)
+            if self.__backup_mode == False:
+                res = self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_START_CMD)
+                res = self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_BLOCK_COMMIT_CMD)
+                self.__backup_mode=True
         except MariaDBApiInstanceHandlerException as e:
             raise MariaDBAppHandlerException(message="Unable to enter backup mode. The issue is the following:\n" + e)
 
     def exit_backup_mode(self):
         try:
 ## TODO Controllare cosa ritornano queste query per fare un controllo ed eventualmente lanciare una eccezione
-            res = self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_END_CMD)
+            if self.__backup_mode == True:
+                res = self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_END_CMD)
+                self.__backup_mode=False
         except MariaDBApiInstanceHandlerException as e:
             raise MariaDBAppHandlerException(message="Unable to enter backup mode. The issue is the following:\n" + e)
 
