@@ -4,9 +4,9 @@ from kubernetes.client.api import core_v1_api
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 
-from kubencbackup.common.backupexceptions import ApiInstancesHandlerException
-from kubencbackup.common.backupexceptions import ApiInstancesConfigException
-from kubencbackup.common.backupconfig import BackupConfig
+from common.backupexceptions import ApiInstancesHandlerException
+from common.backupexceptions import ApiInstancesConfigException
+from common.backupconfig import BackupConfig
 
 ### Config ###
 class K8sApiInstanceConfigException(ApiInstancesConfigException):
@@ -57,7 +57,7 @@ class K8sApiInstanceHandler:
             Configuration.set_default(c)
 
             self.k8s_api_instance = core_v1_api.CoreV1Api()
-        except BaseException:
+        except (BaseException,ApiException):
             self.free_resources()
             raise K8sApiInstanceHandlerException(message="Error creating Kubernetes API client instance")
         

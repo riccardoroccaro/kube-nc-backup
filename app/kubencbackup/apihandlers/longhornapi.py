@@ -1,10 +1,10 @@
 from dateutil.parser import parse as dateutil_parse
 
-import kubencbackup.extlib.longhornlib as longhornlib
+import extlib.longhornlib as longhornlib
 
-from kubencbackup.common.backupexceptions import ApiInstancesHandlerException
-from kubencbackup.common.backupexceptions import ApiInstancesConfigException
-from kubencbackup.common.backupconfig import BackupConfig
+from common.backupexceptions import ApiInstancesHandlerException
+from common.backupexceptions import ApiInstancesConfigException
+from common.backupconfig import BackupConfig
 
 ### Config ###
 class LonghornApiInstanceConfigException(ApiInstancesConfigException):
@@ -144,7 +144,7 @@ class LonghornApiInstanceHandler:
                 raise LonghornApiInstanceHandlerException(message="Cannot find volume "+ pv_name)
 
             # Check the snapshot existence
-            for snap in volume.vol.snapshotList().data:
+            for snap in volume.snapshotList().data:
                 if snap.name == snapshot_name:
                     break
             else:

@@ -1,6 +1,6 @@
 import os
 
-from backupexceptions import BackupException
+from common.backupexceptions import BackupException
 
 class BackupConfigException(BackupException):
     def __init__(self,message):
@@ -36,7 +36,7 @@ class BackupConfig:
     @backup_type.setter
     def backup_type(self,backup_type):
         if backup_type not in ['FULL-BACKUP', 'SNAPSHOT']:
-            raise BackupConfigException(message='Wrong backup type. "BACKUP_TYPE" environment variable is mandatory and must be either "FULL_BACKUP" or "SNAPSHOT"')
+            raise BackupConfigException(message='Wrong backup type. "BACKUP_TYPE" environment variable is mandatory and must be either "FULL-BACKUP" or "SNAPSHOT"')
         self.__backup_type=backup_type
     ### END ###
 

@@ -1,10 +1,10 @@
-from kubencbackup.common.backupexceptions import BackupException
-from kubencbackup.common.backupconfig import BackupConfig
-from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceConfig
-from kubencbackup.apihandlers.mariadbapi import MariaDBApiInstanceConfig
-from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceConfig
-from kubencbackup.apphandlers.nextcloudapp import NextcloudAppConfig
-from kubencbackup.apphandlers.mariadbapp import MariaDBAppConfig
+from common.backupexceptions import BackupException
+from common.backupconfig import BackupConfig
+from apihandlers.kubernetesapi import K8sApiInstanceConfig
+from apihandlers.mariadbapi import MariaDBApiInstanceConfig
+from apihandlers.longhornapi import LonghornApiInstanceConfig
+from apphandlers.nextcloudapp import NextcloudAppConfig
+from apphandlers.mariadbapp import MariaDBAppConfig
 
 class ConfigExtractorException(BackupException):
     def __init__(self,message):

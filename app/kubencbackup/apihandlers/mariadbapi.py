@@ -1,7 +1,7 @@
 import mariadb
 
-from kubencbackup.common.backupexceptions import ApiInstancesHandlerException
-from kubencbackup.common.backupexceptions import ApiInstancesConfigException
+from common.backupexceptions import ApiInstancesHandlerException
+from common.backupexceptions import ApiInstancesConfigException
 
 ### Config ###
 class MariaDBApiInstanceConfigException(ApiInstancesConfigException):
@@ -69,7 +69,7 @@ class MariaDBApiInstanceHandler:
         try:
             self.conn = mariadb.connect(
                 host=self.__config.db_url,
-                port=self.__config.db_port,
+                port=int(self.__config.db_port),
                 user="root",
                 password=self.__config.db_root_password,
                 autocommit=True)

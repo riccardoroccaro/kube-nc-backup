@@ -1,16 +1,16 @@
 from datetime import datetime
 
-from kubencbackup.common.backupconfig import BackupConfigException
-from kubencbackup.common.backupconfig import BackupConfig
-from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceHandler
-from kubencbackup.apihandlers.mariadbapi import MariaDBApiInstanceHandler
-from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceHandler
+from common.backupconfig import BackupConfigException
+from common.backupconfig import BackupConfig
+from apihandlers.kubernetesapi import K8sApiInstanceHandler
+from apihandlers.mariadbapi import MariaDBApiInstanceHandler
+from apihandlers.longhornapi import LonghornApiInstanceHandler
 
-import kubencbackup.common.configextractor as conf_ext
+import common.configextractor as conf_ext
 
-from kubencbackup.common.backupexceptions import AppHandlerException, BackupException
-from kubencbackup.apphandlers.nextcloudapp import NextcloudAppHandler
-from kubencbackup.apphandlers.mariadbapp import MariaDBAppHandler
+from common.backupexceptions import AppHandlerException, BackupException
+from apphandlers.nextcloudapp import NextcloudAppHandler
+from apphandlers.mariadbapp import MariaDBAppHandler
 
 def main():
     # Init BackupConfig
@@ -56,7 +56,7 @@ def main():
                         mdbah.create_backup_volume_snapshot(snapshot_name=snapshot_backup_name)
 
                         # Check whether a simple snapshot or a backup too have to be done
-                        if backup_config.backup_type == "FULL_BACKUP":
+                        if backup_config.backup_type == "FULL-BACKUP":
                             # Create nextcloud backup
                             ncah.create_volume_backup(snapshot_name=snapshot_backup_name)
 
@@ -73,7 +73,7 @@ def main():
                         mdbah.delete_backups_and_snapshots_over_retain_count()
 
                     except AppHandlerException as ahe:
-                        print(e)
+                        print(ahe)
                         return 1
             # The resources will be freed and the correspondent connections closed through the 'with' statement
         # The resources will be freed and the correspondent connections closed through the 'with' statement
