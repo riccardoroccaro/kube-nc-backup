@@ -1,5 +1,7 @@
 import os
 
+import kubencbackup.common.logs as logs
+
 from kubencbackup.common.backupexceptions import BackupException
 
 class BackupConfigException(BackupException):
@@ -36,8 +38,10 @@ class BackupConfig:
     @backup_type.setter
     def backup_type(self,backup_type):
         if backup_type not in ['FULL-BACKUP', 'SNAPSHOT']:
+            logs.print_err(self, 'Wrong backup type. "BACKUP_TYPE" environment variable is mandatory and must be either "FULL-BACKUP" or "SNAPSHOT"')
             raise BackupConfigException(message='Wrong backup type. "BACKUP_TYPE" environment variable is mandatory and must be either "FULL-BACKUP" or "SNAPSHOT"')
         self.__backup_type=backup_type
+        logs.print_info(self, "Succesfully retrieved BACKUP_TYPE as '" + backup_type + "'.")
     ### END ###
 
     ### namespace getter and setter ###
@@ -49,8 +53,10 @@ class BackupConfig:
     def namespace(self,namespace):
         if namespace == None:
             self.__namespace = BackupConfig.DEFAULT_NAMESPACE
+            logs.print_info(self, "NAMESPACE env var not set. Using the default one: " + BackupConfig.DEFAULT_NAMESPACE)
         else:
             self.__namespace=namespace
+            logs.print_info(self, "Succesfully retrieved NAMESPACE as '" + namespace + "'.")
     ### END ###
 
     ### app_name getter and setter ###
@@ -61,8 +67,10 @@ class BackupConfig:
     @app_name.setter
     def app_name(self,app_name):
         if app_name == None:
+            logs.print_err(self,'"NEXTCLOUD_APP_NAME" environment variable is mandatory')
             raise BackupConfigException(message='"NEXTCLOUD_APP_NAME" environment variable is mandatory')
         self.__app_name=app_name
+        logs.print_info(self, "Succesfully retrieved NEXTCLOUD_APP_NAME as '" + app_name + "'.")
     ### END ###
 
     ### app_volume_name getter and setter ###
@@ -73,8 +81,10 @@ class BackupConfig:
     @app_volume_name.setter
     def app_volume_name(self,app_volume_name):
         if app_volume_name == None:
+            logs.print_err(self, '"NEXTCLOUD_VOLUME_NAME" environment variable is mandatory')
             raise BackupConfigException(message='"NEXTCLOUD_VOLUME_NAME" environment variable is mandatory')
         self.__app_volume_name=app_volume_name
+        logs.print_info(self, "Succesfully retrieved NEXTCLOUD_VOLUME_NAME as '" + app_volume_name + "'.")
     ### END ###
 
     ### db_app_name getter and setter ###
@@ -85,8 +95,10 @@ class BackupConfig:
     @db_app_name.setter
     def db_app_name(self,db_app_name):
         if db_app_name == None:
+            logs.print_err(self, '"MARIADB_APP_NAME" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_APP_NAME" environment variable is mandatory')
         self.__db_app_name=db_app_name
+        logs.print_info(self, "Succesfully retrieved MARIADB_APP_NAME as '" + db_app_name + "'.")
     ### END ###
 
     ### db_root_password getter and setter ###
@@ -97,8 +109,10 @@ class BackupConfig:
     @db_root_password.setter
     def db_root_password(self,db_root_password):
         if db_root_password == None:
+            logs.print_err(self, '"MARIADB_DB_ROOT_PASSWORD" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_DB_ROOT_PASSWORD" environment variable is mandatory')
         self.__db_root_password=db_root_password
+        logs.print_info(self, "Succesfully retrieved MARIADB_DB_ROOT_PASSWORD.")
     ### END ###
 
     ### db_url getter and setter ###
@@ -109,8 +123,10 @@ class BackupConfig:
     @db_url.setter
     def db_url(self,db_url):
         if db_url == None:
+            logs.print_err(self, '"MARIADB_URL" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_URL" environment variable is mandatory')
         self.__db_url=db_url
+        logs.print_info(self, "Succesfully retrieved MARIADB_URL as '" + db_url + "'.")
     ### END ###
 
     ### db_port getter and setter ###
@@ -121,8 +137,10 @@ class BackupConfig:
     @db_port.setter
     def db_port(self,db_port):
         if db_port == None:
+            logs.print_err(self, '"MARIADB_PORT" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_PORT" environment variable is mandatory')
         self.__db_port=db_port
+        logs.print_info(self, "Succesfully retrieved MARIADB_PORT as '" + db_port + "'.")
     ### END ###
 
     ### db_actual_volume_name getter and setter ###
@@ -133,8 +151,10 @@ class BackupConfig:
     @db_actual_volume_name.setter
     def db_actual_volume_name(self,db_actual_volume_name):
         if db_actual_volume_name == None:
+            logs.print_err(self, '"MARIADB_ACTUAL_VOLUME_NAME" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_ACTUAL_VOLUME_NAME" environment variable is mandatory')
         self.__db_actual_volume_name=db_actual_volume_name
+        logs.print_info(self, "Succesfully retrieved MARIADB_ACTUAL_VOLUME_NAME as '" + db_actual_volume_name + "'.")
     ### END ###
     
     ### db_backup_volume_name getter and setter ###
@@ -145,8 +165,10 @@ class BackupConfig:
     @db_backup_volume_name.setter
     def db_backup_volume_name(self,db_backup_volume_name):
         if db_backup_volume_name == None:
+            logs.print_err(self, '"MARIADB_BACKUP_VOLUME_NAME" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_BACKUP_VOLUME_NAME" environment variable is mandatory')
         self.__db_backup_volume_name=db_backup_volume_name
+        logs.print_info(self, "Succesfully retrieved MARIADB_BACKUP_VOLUME_NAME as '" + db_backup_volume_name + "'.")
     ### END ###
     
     ### db_backup_file_path getter and setter ###
@@ -157,8 +179,10 @@ class BackupConfig:
     @db_backup_file_path.setter
     def db_backup_file_path(self,db_backup_file_path):
         if db_backup_file_path == None:
+            logs.print_err(self, '"MARIADB_BACKUP_FILE_PATH" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_BACKUP_FILE_PATH" environment variable is mandatory')
         self.__db_backup_file_path=db_backup_file_path
+        logs.print_info(self, "Succesfully retrieved MARIADB_BACKUP_FILE_PATH as '" + db_backup_file_path + "'.")
     ### END ###
     
     ### longhorn_url getter and setter ###
@@ -169,8 +193,10 @@ class BackupConfig:
     @longhorn_url.setter
     def longhorn_url(self,longhorn_url):
         if longhorn_url == None:
+            logs.print_err(self, '"LONGHORN_URL" environment variable is mandatory')
             raise BackupConfigException(message='"LONGHORN_URL" environment variable is mandatory')
         self.__longhorn_url=longhorn_url
+        logs.print_info(self, "Succesfully retrieved LONGHORN_URL as '" + longhorn_url + "'.")
     ### END ###
 
     ### nr_snapshots_to_retain getter and setter ###
@@ -181,11 +207,14 @@ class BackupConfig:
     @nr_snapshots_to_retain.setter
     def nr_snapshots_to_retain(self,nr_snapshots_to_retain):
         if nr_snapshots_to_retain == None:
+            logs.print_info(self, "'NR_SNAPSHOTS_TO_RETAIN' environment variable not set. Setting the default value: " + BackupConfig.DEFAULT_SNAPSHOTS_TO_RETAIN)
             self.__nr_snapshots_to_retain = BackupConfig.DEFAULT_SNAPSHOTS_TO_RETAIN
         else:
             try:
                 self.__nr_snapshots_to_retain = int(nr_snapshots_to_retain)
+                logs.print_info(self, "Succesfully retrieved NR_SNAPSHOTS_TO_RETAIN as '" + nr_snapshots_to_retain + "'.")
             except (ValueError,TypeError) as e:
+                logs.print_err(self, "'NR_SNAPSHOTS_TO_RETAIN' environment variable must be a integer number")
                 raise BackupConfigException(message="NR_SNAPSHOTS_TO_RETAIN environment variable must be a integer number")
     ### END ###
 
@@ -197,10 +226,13 @@ class BackupConfig:
     @nr_backups_to_retain.setter
     def nr_backups_to_retain(self,nr_backups_to_retain):
         if nr_backups_to_retain == None:
+            logs.print_info(self, "'NR_BACKUPS_TO_RETAIN' environment variable not set. Setting the default value: " + BackupConfig.DEFAULT_SNAPSHOTS_TO_RETAIN)
             self.__nr_backups_to_retain = BackupConfig.DEFAULT_BACKUPS_TO_RETAIN
         else:
             try:
                 self.__nr_backups_to_retain = int(nr_backups_to_retain)
+                logs.print_info(self, "Succesfully retrieved NR_BACKUPS_TO_RETAIN as '" + nr_backups_to_retain + "'.")
             except (ValueError,TypeError) as e:
+                logs.print_err(self, "'NR_BACKUPS_TO_RETAIN' environment variable must be a integer number")
                 raise BackupConfigException(message="NR_BACKUPS_TO_RETAIN environment variable must be a integer number")
     ### END ###

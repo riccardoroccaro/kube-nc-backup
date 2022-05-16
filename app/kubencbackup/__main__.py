@@ -7,20 +7,35 @@ from kubencbackup.apphandlers.nextcloudapp import NextcloudAppHandler
 from kubencbackup.apphandlers.mariadbapp import MariaDBAppHandler
 
 import kubencbackup.common.configextractor as conf_ext
+import kubencbackup.common.logs as logs
 
 from kubencbackup.common.backupexceptions import AppHandlerException, BackupException
 from kubencbackup.common.backupconfig import BackupConfig, BackupConfigException
+from kubencbackup.common.logs import LogException
+
+
+# Support class and object for log purpose
+class kubeNCBackup:
+    pass
+
+kubencbackup = kubeNCBackup()
+### END ###
 
 def main():
     # Init BackupConfig
     try:
+        logs.print_info(kubencbackup, "Retrieving the configuration from the environment variables...")
+
         backup_config = BackupConfig()
-    except BackupConfigException as bce:
-        print(bce)
+
+        logs.print_info(kubencbackup, "DONE. Configurations succesfully retrieved.")
+    except (BackupConfigException,LogException) as bce:
+        logs.print_err(kubencbackup, "Cannot retrieve the config environment variables.")
         exit(1)
 
     # Init kubernetes, longhorn and mariadb api handlers with their correspondent connections
     try:
+        logs.print_info(kubencbackup, "Preparing the system...")
         with \
             K8sApiInstanceHandler(conf_ext.backupconfig_to_k8s_api_instance_config(backup_config)) as k8s_api, \
             MariaDBApiInstanceHandler(conf_ext.backupconfig_to_mariadb_api_instance_config(backup_config)) as mariadb_api, \
@@ -76,12 +91,11 @@ def main():
                         return 1
             # The resources will be freed and the correspondent connections closed through the 'with' statement
         # The resources will be freed and the correspondent connections closed through the 'with' statement
-    except BackupException as e:
-        print(e)
+    except (BackupException,LogException) as e:
+        logs.print_err(kubencbackup, "Cannot complete the operations. Note: The operations already done will not be undone. Take care of it on your own.")
         return 1
 
     return 0
-
 
 if __name__ == '__main__':
     exit(main())
