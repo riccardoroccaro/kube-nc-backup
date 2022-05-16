@@ -201,7 +201,9 @@ class LonghornApiInstanceHandler:
                 # Polulate a dictionary with the snapshot (linked to the backup) creation time as a key
                 backs_dict={}
                 for back in backs:
-                    backs_dict[dateutil_parse(back.snapshotCreated)]=back.name
+                    # Check if the backup is already completed, otherwise it will be skipped
+                    if back.progress == 100:
+                        backs_dict[dateutil_parse(back.snapshotCreated)]=back.name
                 
                 # Retrieve the dictionary keys and sort them chronologically
                 keys=[*backs_dict]
