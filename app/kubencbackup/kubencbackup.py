@@ -87,8 +87,11 @@ class KubeNCBackup(Loggable):
                             return 1
                 # The resources will be freed and the correspondent connections closed through the 'with' statement
             # The resources will be freed and the correspondent connections closed through the 'with' statement
+        except conf_ext.ConfigExtractorException:
+            self.log_err(err="Error extracting config values from the main BackupConfig object.")
         except BackupException as e:
             self.log_err("Cannot complete the operations. Note: The operations already done will not be undone. Take care of it on your own.")
+        finally:
             return 1
 
         return 0
