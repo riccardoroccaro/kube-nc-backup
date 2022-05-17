@@ -140,8 +140,13 @@ class BackupConfig(Loggable):
         if db_port == None:
             self.log_err('"MARIADB_PORT" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_PORT" environment variable is mandatory')
-        self.__db_port=db_port
-        self.log_info("Succesfully retrieved MARIADB_PORT as '" + db_port + "'.")
+        try:
+            self.__db_port=int(db_port)
+            self.log_info("Succesfully retrieved MARIADB_PORT as '" + db_port + "'.")
+        except (ValueError,TypeError) as e:
+            self.log_err("'MARIADB_PORT' environment variable must be a integer number")
+            raise BackupConfigException(message="'MARIADB_PORT' environment variable must be a integer number")
+        
     ### END ###
 
     ### db_actual_volume_name getter and setter ###

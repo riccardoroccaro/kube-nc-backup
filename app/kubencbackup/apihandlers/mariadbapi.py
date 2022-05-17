@@ -68,7 +68,7 @@ class MariaDBApiInstanceHandler:
         try:
             self.conn = mariadb.connect(
                 host=self.__config.db_url,
-                port=int(self.__config.db_port),
+                port=self.__config.db_port,
                 user="root",
                 password=self.__config.db_root_password,
                 autocommit=True)
