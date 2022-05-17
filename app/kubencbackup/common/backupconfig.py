@@ -1,6 +1,6 @@
 import os
 
-from common.backupexceptions import BackupException
+from kubencbackup.common.backupexceptions import BackupException
 
 class BackupConfigException(BackupException):
     def __init__(self,message):

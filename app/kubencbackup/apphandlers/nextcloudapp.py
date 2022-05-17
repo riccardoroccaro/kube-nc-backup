@@ -1,11 +1,8 @@
 from time import sleep
 
-from apihandlers.kubernetesapi import K8sApiInstanceHandlerException
-from apihandlers.kubernetesapi import K8sApiInstanceHandler
-from apihandlers.longhornapi import LonghornApiInstanceHandlerException
-from apihandlers.longhornapi import LonghornApiInstanceHandler
-from common.backupexceptions import AppConfigException
-from common.backupexceptions import AppHandlerException
+from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceHandler, K8sApiInstanceHandlerException
+from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceHandler, LonghornApiInstanceHandlerException
+from kubencbackup.common.backupexceptions import AppConfigException, AppHandlerException
 
 ### Config ###
 class NextcloudAppConfigException(AppConfigException):

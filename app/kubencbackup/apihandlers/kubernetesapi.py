@@ -4,9 +4,8 @@ from kubernetes.client.api import core_v1_api
 from kubernetes.client.rest import ApiException
 from kubernetes.stream import stream
 
-from common.backupexceptions import ApiInstancesHandlerException
-from common.backupexceptions import ApiInstancesConfigException
-from common.backupconfig import BackupConfig
+from kubencbackup.common.backupconfig import BackupConfig
+from kubencbackup.common.backupexceptions import ApiInstancesConfigException, ApiInstancesHandlerException
 
 ### Config ###
 class K8sApiInstanceConfigException(ApiInstancesConfigException):

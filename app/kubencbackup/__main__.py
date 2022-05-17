@@ -1,16 +1,15 @@
 from datetime import datetime
 
-from common.backupconfig import BackupConfigException
-from common.backupconfig import BackupConfig
-from apihandlers.kubernetesapi import K8sApiInstanceHandler
-from apihandlers.mariadbapi import MariaDBApiInstanceHandler
-from apihandlers.longhornapi import LonghornApiInstanceHandler
+from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceHandler
+from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceHandler
+from kubencbackup.apihandlers.mariadbapi import MariaDBApiInstanceHandler
+from kubencbackup.apphandlers.nextcloudapp import NextcloudAppHandler
+from kubencbackup.apphandlers.mariadbapp import MariaDBAppHandler
 
-import common.configextractor as conf_ext
+import kubencbackup.common.configextractor as conf_ext
 
-from common.backupexceptions import AppHandlerException, BackupException
-from apphandlers.nextcloudapp import NextcloudAppHandler
-from apphandlers.mariadbapp import MariaDBAppHandler
+from kubencbackup.common.backupexceptions import AppHandlerException, BackupException
+from kubencbackup.common.backupconfig import BackupConfig, BackupConfigException
 
 def main():
     # Init BackupConfig

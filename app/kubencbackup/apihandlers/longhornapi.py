@@ -1,10 +1,10 @@
 from dateutil.parser import parse as dateutil_parse
 
-import extlib.longhornlib as longhornlib
+import kubencbackup.extlib.longhornlib as longhornlib
 
-from common.backupexceptions import ApiInstancesHandlerException
-from common.backupexceptions import ApiInstancesConfigException
-from common.backupconfig import BackupConfig
+from kubencbackup.common.backupconfig import BackupConfig
+from kubencbackup.common.backupexceptions import ApiInstancesConfigException, ApiInstancesHandlerException
+
 
 ### Config ###
 class LonghornApiInstanceConfigException(ApiInstancesConfigException):

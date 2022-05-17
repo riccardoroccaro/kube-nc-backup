@@ -1,7 +1,6 @@
 import mariadb
 
-from common.backupexceptions import ApiInstancesHandlerException
-from common.backupexceptions import ApiInstancesConfigException
+from kubencbackup.common.backupexceptions import ApiInstancesConfigException, ApiInstancesHandlerException
 
 ### Config ###
 class MariaDBApiInstanceConfigException(ApiInstancesConfigException):

@@ -1,11 +1,7 @@
-from apihandlers.kubernetesapi import K8sApiInstanceHandlerException
-from apihandlers.kubernetesapi import K8sApiInstanceHandler
-from apihandlers.mariadbapi import MariaDBApiInstanceHandlerException
-from apihandlers.mariadbapi import MariaDBApiInstanceHandler
-from apihandlers.longhornapi import LonghornApiInstanceHandlerException
-from apihandlers.longhornapi import LonghornApiInstanceHandler
-from common.backupexceptions import AppConfigException
-from common.backupexceptions import AppHandlerException
+from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceHandler, K8sApiInstanceHandlerException
+from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceHandler, LonghornApiInstanceHandlerException
+from kubencbackup.apihandlers.mariadbapi import MariaDBApiInstanceHandler, MariaDBApiInstanceHandlerException
+from kubencbackup.common.backupexceptions import AppConfigException, AppHandlerException
 
 ### Config ###
 class MariaDBAppConfigException(AppConfigException):
