@@ -31,7 +31,7 @@ class KubeNCBackup(Loggable):
 
         # Init kubernetes, longhorn and mariadb api handlers with their correspondent connections
         try:
-            self.log_info("Preparing the system...")
+            self.log_info("Preparing the system for the backups...")
             with \
                 K8sApiInstanceHandler(conf_ext.backupconfig_to_k8s_api_instance_config(backup_config)) as k8s_api, \
                 MariaDBApiInstanceHandler(conf_ext.backupconfig_to_mariadb_api_instance_config(backup_config)) as mariadb_api, \
