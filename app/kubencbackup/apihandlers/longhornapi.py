@@ -72,7 +72,9 @@ class LonghornApiInstanceHandlerException(ApiInstancesHandlerException):
 
 class LonghornApiInstanceHandler(Loggable):
     def __init__(self, config):
-        if type(config) != LonghornApiInstanceConfig:
+        super().__init__(name="LONGHORN-API  ")
+
+        if config == None or type(config) != LonghornApiInstanceConfig:
             self.log_err(err="the configuration object mustn't be None and must be a LonghornApiInstanceConfig instance")
             raise LonghornApiInstanceHandlerException(message="config must be of type LonghornApiInstanceConfig")
         self.config=config
@@ -92,6 +94,7 @@ class LonghornApiInstanceHandler(Loggable):
         return self
 
     def __exit__(self, *a):
+        self.log_info(msg="Cleaning up Longhorn API resources...")
         self.free_resources()
 
     def __del__(self):

@@ -120,6 +120,7 @@ class K8sApiInstanceHandler(Loggable):
             resp = self.k8s_api_instance.list_namespaced_pod(namespace=self.conf.namespace, label_selector=label)
         except ApiException as e:
             if e.status != 404:
+                self.log_err(err="Unknown Kubernetes API error")
                 raise K8sApiInstanceHandlerException(message="Unknown error: "+e)
         
         if (resp is None) or (len(resp.items) != 1):
@@ -139,6 +140,7 @@ class K8sApiInstanceHandler(Loggable):
 
     def exec_container_command(self, pod_label, command):
         # Retrieving the pod and checking that is in "Running" state
+        self.log_info(msg="Retrieving the pod and checking it is in Running state....")
         pod = self.get_pod_by_label(label=pod_label)
         if pod.status.phase != 'Running':
             self.log_err(err="The pod with label " + pod_label + " is not in 'Running' state.")
@@ -147,7 +149,7 @@ class K8sApiInstanceHandler(Loggable):
         # Creating exec command
         exec_command = ['/bin/bash', '-c', command]
 
-        self.log_info(msg="Executing the command "+ exec_command + " inside the pod...")
+        self.log_info(msg="DONE. Executing the command "+ exec_command + " inside the pod...")
         # Calling exec and waiting for response
         try: 
             resp = stream(self.k8s_api_instance.connect_get_namespaced_pod_exec,
@@ -159,6 +161,7 @@ class K8sApiInstanceHandler(Loggable):
         except BaseException as e:
             self.log_err(err="Unable to execute the command " + exec_command )
             raise K8sApiInstanceHandlerException(message="Unable to execute the command " + command +  ". The call returned this message:\n" + e)
+        self.log_info(msg="Done. Command succesfully executed")
         return resp
     ### END - Methods implementation ###
 
