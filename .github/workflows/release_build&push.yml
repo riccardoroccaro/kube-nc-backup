@@ -37,9 +37,9 @@ jobs:
           context: .
           file: docker/Dockerfile
           push: true
-          tags: r0cc4rd0/nextcloud-lh-bak:${{ env.commit_var }},r0cc4rd0/nextcloud-lh-bak:${{ env.tag_var }},r0cc4rd0/nextcloud-lh-bak:latest
+          tags: r0cc4rd0/kube-nc-backup:${{ env.commit_var }},r0cc4rd0/kube-nc-backup:${{ env.tag_var }},r0cc4rd0/kube-nc-backup:latest
           no-cache: false
-          cache-from: type=registry,ref=r0cc4rd0/nextcloud-lh-bak:main-latest
+          cache-from: type=registry,ref=r0cc4rd0/kube-nc-backup:main-latest
           cache-to: type=inline
       -
         name: Image digest
