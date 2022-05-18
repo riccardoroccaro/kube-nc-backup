@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # clean the no-more-useful apt-get installed software and the apt-get cache
 RUN apt-get autoremove --purge -y wget curl gcc && \
-    apt-get autopurge -y && apt-get clean && \
+    apt-get autopurge -y && apt-get clean -y && \
     rm -rf /var/lib/apt/lists/*
 
 # copy the content of the local src directory to the working directory
