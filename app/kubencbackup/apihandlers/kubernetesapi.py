@@ -77,9 +77,13 @@ class K8sApiInstanceHandler(Loggable):
         self.free_resources()
 
     def free_resources(self):
-        if self.k8s_api_instance != None:
-            self.log_info(msg="Cleaning the Kubernetes API resources")
-            del(self.k8s_api_instance)
+        try:
+            del(self.client)
+            self.log_info(msg="Kubernetes API resources succesfully cleaned up")
+        except (AttributeError,NameError):
+            pass
+        except:
+            self.log_err(err="Unable to clean up the Kubernetes API resources")
 
     ### k8s_api_instance getter, setter and deleter ###
     @property
@@ -93,7 +97,6 @@ class K8sApiInstanceHandler(Loggable):
     @k8s_api_instance.deleter
     def k8s_api_instance(self):
         del(self.__k8s_api_instance)
-        self.k8s_api_instance = None
     ### END - k8s_api_instance ###
 
     ### conf getter, setter and deleter ###
