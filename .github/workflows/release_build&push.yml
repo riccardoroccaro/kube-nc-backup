@@ -38,9 +38,7 @@ jobs:
           file: docker/Dockerfile
           push: true
           tags: r0cc4rd0/kube-nc-backup:${{ env.commit_var }},r0cc4rd0/kube-nc-backup:${{ env.tag_var }},r0cc4rd0/kube-nc-backup:latest
-          no-cache: false
-          cache-from: type=registry,ref=r0cc4rd0/kube-nc-backup:main-latest
-          cache-to: type=inline
+          no-cache: true
       -
         name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
