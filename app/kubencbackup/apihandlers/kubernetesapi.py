@@ -78,7 +78,7 @@ class K8sApiInstanceHandler(Loggable):
 
     def free_resources(self):
         try:
-            del(self.client)
+            del(self.k8s_api_instance)
             self.log_info(msg="Kubernetes API resources succesfully cleaned up")
         except (AttributeError,NameError):
             pass
