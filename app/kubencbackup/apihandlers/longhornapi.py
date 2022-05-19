@@ -133,7 +133,7 @@ class LonghornApiInstanceHandler(Loggable):
     @config.setter
     def config(self, config):
         if config == None or type(config) != LonghornApiInstanceConfig:
-            self.log_err(err=self.log_err(err="the configuration object mustn't be None and must be a LonghornApiInstanceConfig instance"))
+            self.log_err(err="the configuration object mustn't be None and must be a LonghornApiInstanceConfig instance")
             raise LonghornApiInstanceHandlerException(message="config mustn't be None and must be of type LonghornApiInstanceConfig")
         self.__config=config
     ### END ###
