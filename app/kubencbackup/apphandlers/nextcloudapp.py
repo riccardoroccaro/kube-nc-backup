@@ -54,6 +54,8 @@ class NextcloudAppHandler(Loggable):
     __EXIT_MAINTENANCE_CMD='runuser -u www-data -- php occ maintenance:mode --off'
 
     def __init__(self, config, k8s_api, longhorn_api):
+        super().__init__(name="NEXTCLOUD-APP ")
+
         self.log_info(msg="Initializing Nextcloud App Handler...")
         try:
             self.config=config
@@ -213,8 +215,8 @@ class NextcloudAppHandler(Loggable):
                 self.log_err(err="Unable to delete the old snapshots and backups")
                 raise NextcloudAppHandlerException(message="Unable to delete the old snapshots and backups. The issue is the following:\n" + e)
         else:
-            self.log_err(err="Nextcloud maintenance mode not enabled. Cannot continue with the backup creation")
+            self.log_err(err="Nextcloud maintenance mode not enabled. Cannot continue with the old snapshots and backups deletion")
             raise NextcloudAppHandlerException(message="Nextcloud maintenance mode not enabled. Cannot continue with the old backups and snapshots deletion")
-        self.log_info(msg="DONE. Nextcloud oldest volume backups and snapshots deleted")
+        self.log_info(msg="DONE. Nextcloud oldest volume backups and snapshots succesfully deleted")
     ### END - Methods implementation###
 ### END - Handler ###

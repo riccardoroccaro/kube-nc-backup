@@ -2,6 +2,7 @@ from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceHandler, K8sApi
 from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceHandler, LonghornApiInstanceHandlerException
 from kubencbackup.apihandlers.mariadbapi import MariaDBApiInstanceHandler, MariaDBApiInstanceHandlerException
 from kubencbackup.common.backupexceptions import AppConfigException, AppHandlerException
+from kubencbackup.common.loggable import Loggable
 
 ### Config ###
 class MariaDBAppConfigException(AppConfigException):
@@ -84,7 +85,7 @@ class MariaDBAppHandlerException(AppHandlerException):
         super().__init__(message)
 
 
-class MariaDBAppHandler:
+class MariaDBAppHandler(Loggable):
     __BACKUP_STAGE_START_CMD="BACKUP STAGE START"
     __BACKUP_STAGE_BLOCK_COMMIT_CMD="BACKUP STAGE BLOCK_COMMIT"
     __BACKUP_STAGE_END_CMD="BACKUP STAGE END"
@@ -94,27 +95,45 @@ class MariaDBAppHandler:
     __MYSQLDUMP_CMD="mysqldump --add-drop-database --add-drop-table --lock-all-tables --result-file=" + __FILE_PATH_ESCAPE + " --password=" + __PASSWORD_ESCAPE + " --all-databases"
 
     def __init__(self,config, k8s_api, mariadb_api, longhorn_api):
-        self.config=config
-        self.k8s_api=k8s_api
-        self.mariadb_api=mariadb_api
-        self.longhorn_api=longhorn_api
+        super().__init__(name="MARIADB-APP   ")
 
-        self.__backup_mode=False
+        self.log_info(msg="Initializing MariaDB App Handler...")
+        try:
+            self.config=config
+            self.k8s_api=k8s_api
+            self.mariadb_api=mariadb_api
+            self.longhorn_api=longhorn_api
+
+            self.__backup_mode=False
+        except:
+            self.log_err(err="Unable to initialize MariaDB App Handler")
 
     def __enter__(self):
         try:
+            self.log_info(msg="Entering MariaDB backup mode...")
             self.enter_backup_mode()
+            self.log_info(msg="DONE. Succesfully entered MariaDB bakcup mode")
         except MariaDBAppHandlerException as e:
-            self.exit_backup_mode()
+            self.log_err(err="Unable to enter MariaDB backup mode")
+            self.clean_resources()
             raise MariaDBAppHandlerException(message=e.message)
 
         return self
 
     def __exit__(self, *a):
-        self.exit_backup_mode()
+        self.clean_resources()
 
     def __del__(self):
-        self.exit_backup_mode()
+        self.clean_resources()
+
+    def clean_resources(self):
+        if self.backup_mode:
+            try:
+                self.log_info(msg="Exiting MariaDB backup mode...")
+                self.exit_backup_mode()
+                self.log_info(msg="Succesfully exited MariaDB backup mode")
+            except:
+                self.log_err(err="Unable to exit MariaDB backup mode. Check that the DB works well after the end of this process")
 
     ### config getter and setter ###
     @property
@@ -124,6 +143,7 @@ class MariaDBAppHandler:
     @config.setter
     def config(self,config):
         if config == None or type(config) != MariaDBAppConfig:
+            self.log_err(err="the configuration object mustn't be None and must be a MariaDBAppConfig instance")
             raise MariaDBAppHandlerException(message='"config" variable is mandatory and must be of type "MariaDBAppConfig"')
         self.__config=config
     ### END ###
@@ -136,6 +156,7 @@ class MariaDBAppHandler:
     @k8s_api.setter
     def k8s_api(self,k8s_api):
         if k8s_api == None or type(k8s_api) != K8sApiInstanceHandler:
+            self.log_err(err='"k8s_api" variable is mandatory and must be of type "K8sApiInstanceHandler"')
             raise MariaDBAppHandlerException(message='"k8s_api" variable is mandatory and must be of type "K8sApiInstanceHandler"')
         self.__k8s_api=k8s_api
     ### END ###
@@ -148,6 +169,7 @@ class MariaDBAppHandler:
     @mariadb_api.setter
     def mariadb_api(self,mariadb_api):
         if mariadb_api == None or type(mariadb_api) != MariaDBApiInstanceHandler:
+            self.log_err(err='"mariadb_api" variable is mandatory and must be of type "MariaDBApiInstanceHandler"')
             raise MariaDBAppHandlerException(message='"mariadb_api" variable is mandatory and must be of type "MariaDBApiInstanceHandler"')
         self.__mariadb_api=mariadb_api
     ### END ###
@@ -160,12 +182,20 @@ class MariaDBAppHandler:
     @longhorn_api.setter
     def longhorn_api(self,longhorn_api):
         if longhorn_api == None or type(longhorn_api) != LonghornApiInstanceHandler:
+            self.log_err(err='"longhorn_api" variable is mandatory and must be of type "LonghornApiInstanceHandler"')
             raise MariaDBAppHandlerException(message='"longhorn_api" variable is mandatory and must be of type "LonghornApiInstanceHandler"')
         self.__longhorn_api=longhorn_api
     ### END ###
 
+    ### backup_mode getter ###
+    @property
+    def backup_mode(self):
+        return self.__backup_mode
+    ### END ###
+
     ### Methods implementation ###
     def create_mariadb_mysqldump(self):
+        self.log_info("Creating mysqldump backup file...")
         try:
             resp = self.k8s_api.exec_container_command(
                 pod_label="app="+self.config.db_app_name, 
@@ -173,78 +203,124 @@ class MariaDBAppHandler:
                     .replace(MariaDBAppHandler.__PASSWORD_ESCAPE,self.config.db_root_password)\
                     .replace(MariaDBAppHandler.__FILE_PATH_ESCAPE,self.config.db_backup_file_path))
         except K8sApiInstanceHandlerException as e:
+            self.log_err(err="Unable to create mysqldump backup file")
             raise MariaDBAppHandlerException(message="Unable to create mysql dumpfile. The issue is the following:\n" + e)
 
         if resp != "":
+            self.log_err(err="Unable to create mysqldump backup file")
             raise MariaDBAppHandlerException(message="Unable to create mysql dumpfile. The issue is the following:\n" + resp)
+        self.log_info("DONE. mysqldump backup file succesfully created")
 
     def enter_backup_mode(self):
+        self.log_info(msg="Enabling MariaDB backup mode...")
         try:
-## TODO Controllare cosa ritornano queste query per fare un controllo ed eventualmente lanciare una eccezione
-            if self.__backup_mode == False:
-                res = self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_START_CMD)
-                res = self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_BLOCK_COMMIT_CMD)
+            if self.backup_mode == False:
+                self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_START_CMD)
+                self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_BLOCK_COMMIT_CMD)
                 self.__backup_mode=True
-        except MariaDBApiInstanceHandlerException as e:
-            raise MariaDBAppHandlerException(message="Unable to enter backup mode. The issue is the following:\n" + e)
+            else:
+                self.log_info("MariaDB backup mode already enabled")
+        except:
+            self.log_err(err="Unable to enable MariaDB backup mode")
+            raise MariaDBAppHandlerException(message="Unable to enter backup mode")
+        self.log_info(msg="DONE. Succesfully enabled MariaDB backup mode")
 
     def exit_backup_mode(self):
+        self.log_info(msg="Disabling MariaDB backup mode...")
         try:
-## TODO Controllare cosa ritornano queste query per fare un controllo ed eventualmente lanciare una eccezione
-            if self.__backup_mode == True:
-                res = self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_END_CMD)
+            if self.backup_mode == True:
+                self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_END_CMD)
                 self.__backup_mode=False
-        except MariaDBApiInstanceHandlerException as e:
-            raise MariaDBAppHandlerException(message="Unable to enter backup mode. The issue is the following:\n" + e)
+            else:
+                self.log_info("MariaDB backup mode already disabled")
+        except:
+            self.log_err(err="Unable to disable backup mode. Check that the DB works well after the end of this process")
+            raise MariaDBAppHandlerException(message="Unable to disable backup mode. Check that the DB works well after the end of this process")
+        self.log_info(msg="DONE. Succesfully disabled MariaDB backup mode")
 
     def create_actual_volume_snapshot(self, snapshot_name):
-        try:
-            self.longhorn_api.create_volume_snapshot(
-                snapshot_name=snapshot_name,
-                pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_actual_volume_name)
-            )
-        except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
-            raise MariaDBAppHandlerException(message="Unable to create the snapshot. The issue is the following:\n" + e)
+        self.log_info(msg="Creating the MariaDB volume snapshot with name " + snapshot_name + "...")
+        if self.backup_mode:
+            try:
+                self.longhorn_api.create_volume_snapshot(
+                    snapshot_name=snapshot_name,
+                    pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_actual_volume_name)
+                )
+            except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
+                self.log_err(err="Unable to create the snapshot")
+                raise MariaDBAppHandlerException(message="Unable to create the snapshot. The issue is the following:\n" + e)
+        else:
+            self.log_err(err="MariaDB backup mode not enabled. Cannot continue with the snapshot creation")
+            raise MariaDBAppHandlerException(message="MariaDB backup mode not enabled. Cannot continue with the snapshot creation")
+        self.log_info(msg="DONE. MariaDB volume snapshot " + snapshot_name + " successfully created")
 
     def create_actual_volume_backup(self, snapshot_name):
-        try:
-            self.longhorn_api.create_volume_backup(
-                snapshot_name=snapshot_name,
-                pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_actual_volume_name)
-            )
-        except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
-            raise MariaDBAppHandlerException(message="Unable to create the backup. The issue is the following:\n" + e)
+        self.log_info(msg="Creating the MariaDB volume backup from the snapshot" + snapshot_name + "...")
+        if self.backup_mode:
+            try:
+                self.longhorn_api.create_volume_backup(
+                    snapshot_name=snapshot_name,
+                    pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_actual_volume_name)
+                )
+            except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
+                self.log_err(err="Unable to create the backup")
+                raise MariaDBAppHandlerException(message="Unable to create the backup. The issue is the following:\n" + e)
+            else:
+                self.log_err(err="MariaDB backup mode not enabled. Cannot continue with the backup creation")
+            raise MariaDBAppHandlerException(message="MariaDB backup mode not enabled. Cannot continue with the backup creation")
+        self.log_info(msg="DONE. MariaDB volume backup from snapshot " + snapshot_name + " successfully created")
 
     def create_backup_volume_snapshot(self, snapshot_name):
-        try:
-            self.longhorn_api.create_volume_snapshot(
-                snapshot_name=snapshot_name,
-                pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_backup_volume_name)
-            )
-        except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
-            raise MariaDBAppHandlerException(message="Unable to create the snapshot. The issue is the following:\n" + e)
+        self.log_info(msg="Creating the MariaDB backup volume snapshot with name " + snapshot_name + "...")
+        if self.backup_mode:
+            try:
+                self.longhorn_api.create_volume_snapshot(
+                    snapshot_name=snapshot_name,
+                    pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_backup_volume_name)
+                )
+            except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
+                self.log_err(err="Unable to create the snapshot")
+                raise MariaDBAppHandlerException(message="Unable to create the snapshot. The issue is the following:\n" + e)
+        else:
+            self.log_err(err="MariaDB backup mode not enabled. Cannot continue with the snapshot creation")
+            raise MariaDBAppHandlerException(message="MariaDB backup mode not enabled. Cannot continue with the snapshot creation")
+        self.log_info(msg="DONE. MariaDB backup volume snapshot " + snapshot_name + " successfully created")
 
     def create_backup_volume_backup(self, snapshot_name):
-        try:
-            self.longhorn_api.create_volume_backup(
-                snapshot_name=snapshot_name,
-                pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_backup_volume_name)
-            )
-        except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
-            raise MariaDBAppHandlerException(message="Unable to create the backup. The issue is the following:\n" + e)
+        self.log_info(msg="Creating the MariaDB backup volume backup from the snapshot" + snapshot_name + "...")
+        if self.backup_mode:
+            try:
+                self.longhorn_api.create_volume_backup(
+                    snapshot_name=snapshot_name,
+                    pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_backup_volume_name)
+                )
+            except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
+                self.log_err(err="Unable to create the backup")
+                raise MariaDBAppHandlerException(message="Unable to create the backup. The issue is the following:\n" + e)
+        else:
+            self.log_err(err="MariaDB backup mode not enabled. Cannot continue with the backup creation")
+            raise MariaDBAppHandlerException(message="MariaDB backup mode not enabled. Cannot continue with the backup creation")
+        self.log_info(msg="DONE. MariaDB backup volume backup from snapshot " + snapshot_name + " successfully created")
 
 
     def delete_backups_and_snapshots_over_retain_count(self):
-        try:
-            self.longhorn_api.delete_backups_and_snapshots_over_retain_count(
-                pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_actual_volume_name)
-            )
+        self.log_info(msg="Deleting the MariaDB old backups and snapshots...")
+        if self.backup_mode:
+            try:
+                self.longhorn_api.delete_backups_and_snapshots_over_retain_count(
+                    pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_actual_volume_name)
+                )
 
-            self.longhorn_api.delete_backups_and_snapshots_over_retain_count(
-                pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_backup_volume_name)
-            )
+                self.longhorn_api.delete_backups_and_snapshots_over_retain_count(
+                    pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.db_backup_volume_name)
+                )
 
-        except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
-            raise MariaDBAppHandlerException(message="Unable to delete the old snapshots and backups. The issue is the following:\n" + e)
+            except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
+                self.log_err(err="Unable to delete the old snapshots and backups")
+                raise MariaDBAppHandlerException(message="Unable to delete the old snapshots and backups. The issue is the following:\n" + e)
+        else:
+            self.log_err(err="Nextcloud maintenance mode not enabled. Cannot continue with the old snapshots and backups deletion")
+            raise MariaDBAppHandlerException(message="Nextcloud maintenance mode not enabled. Cannot continue with the old backups and snapshots deletion")
+        self.log_info(msg="DONE. MariaDB oldest volume backups and snapshots succesfully deleted")
     ### END - Methods implementation###
 ### END - Handler ###
