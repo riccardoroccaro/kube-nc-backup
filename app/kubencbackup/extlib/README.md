@@ -1,0 +1,1 @@
+The Longhorn python external lib should be imported from [Longhorn GitHub repository](https://raw.githubusercontent.com/longhorn/longhorn-tests/885646e5fc1a1d9b904257251eae4101e35a78ff/manager/integration/tests/longhorn.py)
