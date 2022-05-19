@@ -6,6 +6,7 @@ from kubernetes.stream import stream
 
 from kubencbackup.common.backupconfig import BackupConfig
 from kubencbackup.common.backupexceptions import ApiInstancesConfigException, ApiInstancesHandlerException
+from kubencbackup.common.loggable import Loggable
 
 ### Config ###
 class K8sApiInstanceConfigException(ApiInstancesConfigException):
@@ -37,16 +38,19 @@ class K8sApiInstanceHandlerException(ApiInstancesHandlerException):
     def __init__(self,message):
         super().__init__(message)
 
-class K8sApiInstanceHandler:
+class K8sApiInstanceHandler(Loggable):
     def __init__(self,conf):
+        super().__init__(name="KUBERNETES-API", log_level=2)
         try:
             self.conf=conf
         except BaseException:
             raise K8sApiInstanceHandlerException(message="Error creating Kubernetes API client instance")
             
     def __enter__(self):
+        self.log_info(msg="Initializing Kubernetes API...")
         try:
             # Load and set KUBECONFIG
+            self.log_info(msg="Loading config...")
             config.load_kube_config()
             try:
                 c = Configuration().get_default_copy()
@@ -55,8 +59,12 @@ class K8sApiInstanceHandler:
                 c.assert_hostname = False
             Configuration.set_default(c)
 
+            self.log_info(msg="DONE. Retrieving API endpoint...")
             self.k8s_api_instance = core_v1_api.CoreV1Api()
+
+            self.log_info(msg="DONE. Kubernetes API successfully initialized.")
         except (BaseException,ApiException):
+            self.log_err(err="Error creating Kubernetes API client instance")
             self.free_resources()
             raise K8sApiInstanceHandlerException(message="Error creating Kubernetes API client instance")
         
@@ -69,7 +77,9 @@ class K8sApiInstanceHandler:
         self.free_resources()
 
     def free_resources(self):
-        del(self.k8s_api_instance)
+        if self.k8s_api_instance != None:
+            self.log_info(msg="Cleaning the Kubernetes API resources")
+            del(self.k8s_api_instance)
 
     ### k8s_api_instance getter, setter and deleter ###
     @property
@@ -94,6 +104,7 @@ class K8sApiInstanceHandler:
     @conf.setter
     def conf(self, conf):
         if conf == None or type(conf) != K8sApiInstanceConfig:
+            self.log_err(err="the configuration object mustn't be None and must be a K8sApiInstanceConfig instance")
             raise K8sApiInstanceHandlerException(message="conf mustn't be None and must be a K8sApiInstanceConfig instance")
         self.__conf=conf
     ### END - conf ###
@@ -103,34 +114,42 @@ class K8sApiInstanceHandler:
     def get_pod_by_label(self, label):
         resp = None
 
+        self.log_info(msg="Retrieving the pod by label and checking that there is just one pod having that label")
         # Retrieving pod and checking that there is just one pod having that label
         try:
             resp = self.k8s_api_instance.list_namespaced_pod(namespace=self.conf.namespace, label_selector=label)
         except ApiException as e:
             if e.status != 404:
+                self.log_err(err="Unknown Kubernetes API error")
                 raise K8sApiInstanceHandlerException(message="Unknown error: "+e)
         
         if (resp is None) or (len(resp.items) != 1):
+            self.log_err(err="There are too many pods with the label " + label + " or there isn't any. Just one pod must be present.")
             raise K8sApiInstanceHandlerException(message="There are too many pods with the label " + label + " or there isn't any. Just one pod must be present.")
         else:
             return resp.items.pop()
     
     def get_pv_name_from_pvc_name(self,pvc_name):
         try:
+            self.log_info("Retrieving the PV by PVC name " + pvc_name)
             pvc=self.k8s_api_instance.read_namespaced_persistent_volume_claim(namespace=self.conf.namespace, name=pvc_name)
         except BaseException:
+            self.log_err(err="Error retrieving PV name by PVC name "+ pvc_name)
             raise K8sApiInstanceHandlerException(message="Error retrieving Persistent Volume name from Persistent Volume Claim "+ pvc_name)
         return pvc.spec.volume_name
 
     def exec_container_command(self, pod_label, command):
         # Retrieving the pod and checking that is in "Running" state
+        self.log_info(msg="Retrieving the pod and checking it is in Running state....")
         pod = self.get_pod_by_label(label=pod_label)
         if pod.status.phase != 'Running':
+            self.log_err(err="The pod with label " + pod_label + " is not in 'Running' state.")
             raise K8sApiInstanceHandlerException(message="The pod with label " + pod_label + " is not in 'Running' state.")
         
         # Creating exec command
         exec_command = ['/bin/bash', '-c', command]
 
+        self.log_info(msg="DONE. Executing the command inside the pod...")
         # Calling exec and waiting for response
         try: 
             resp = stream(self.k8s_api_instance.connect_get_namespaced_pod_exec,
@@ -140,7 +159,9 @@ class K8sApiInstanceHandler:
                         stderr=True, stdin=False,
                         stdout=True, tty=False)
         except BaseException as e:
+            self.log_err(err="Unable to execute the command " + command )
             raise K8sApiInstanceHandlerException(message="Unable to execute the command " + command +  ". The call returned this message:\n" + e)
+        self.log_info(msg="Done. Command successfully executed")
         return resp
     ### END - Methods implementation ###
 
