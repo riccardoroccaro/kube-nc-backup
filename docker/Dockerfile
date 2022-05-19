@@ -29,7 +29,7 @@ RUN apt-get autoremove --purge -y wget curl gcc && \
     rm -rf /var/lib/apt/lists/*
 
 # copy the content of the local src directory to the working directory
-COPY app/* .
+COPY app/kubencbackup .
 
 # add the longhorn external library
 ADD https://raw.githubusercontent.com/longhorn/longhorn-tests/885646e5fc1a1d9b904257251eae4101e35a78ff/manager/integration/tests/longhorn.py \
