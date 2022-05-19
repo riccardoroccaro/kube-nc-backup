@@ -51,7 +51,8 @@ class K8sApiInstanceHandler(Loggable):
         try:
             # Load and set KUBECONFIG
             self.log_info(msg="Loading config...")
-            config.load_kube_config()
+            # config.load_kube_config()
+            config.load_incluster_config()
             try:
                 c = Configuration().get_default_copy()
             except AttributeError:
