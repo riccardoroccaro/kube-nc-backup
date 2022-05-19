@@ -95,7 +95,7 @@ class MariaDBAppHandler(Loggable):
     __MYSQLDUMP_CMD="mysqldump --add-drop-database --add-drop-table --lock-all-tables --result-file=" + __FILE_PATH_ESCAPE + " --password=" + __PASSWORD_ESCAPE + " --all-databases"
 
     def __init__(self,config, k8s_api, mariadb_api, longhorn_api):
-        super().__init__(name="MARIADB-APP   ")
+        super().__init__(name="MARIADB-APP###", log_level=1)
 
         self.log_info(msg="Initializing MariaDB App Handler...")
         try:
@@ -112,7 +112,7 @@ class MariaDBAppHandler(Loggable):
         try:
             self.log_info(msg="Entering MariaDB backup mode...")
             self.enter_backup_mode()
-            self.log_info(msg="DONE. Succesfully entered MariaDB bakcup mode")
+            self.log_info(msg="DONE. successfully entered MariaDB bakcup mode")
         except MariaDBAppHandlerException as e:
             self.log_err(err="Unable to enter MariaDB backup mode")
             self.clean_resources()
@@ -131,7 +131,7 @@ class MariaDBAppHandler(Loggable):
             try:
                 self.log_info(msg="Exiting MariaDB backup mode...")
                 self.exit_backup_mode()
-                self.log_info(msg="Succesfully exited MariaDB backup mode")
+                self.log_info(msg="successfully exited MariaDB backup mode")
             except:
                 self.log_err(err="Unable to exit MariaDB backup mode. Check that the DB works well after the end of this process")
 
@@ -209,7 +209,7 @@ class MariaDBAppHandler(Loggable):
         if resp != "":
             self.log_err(err="Unable to create mysqldump backup file")
             raise MariaDBAppHandlerException(message="Unable to create mysql dumpfile. The issue is the following:\n" + resp)
-        self.log_info("DONE. mysqldump backup file succesfully created")
+        self.log_info("DONE. mysqldump backup file successfully created")
 
     def enter_backup_mode(self):
         self.log_info(msg="Enabling MariaDB backup mode...")
@@ -223,7 +223,7 @@ class MariaDBAppHandler(Loggable):
         except:
             self.log_err(err="Unable to enable MariaDB backup mode")
             raise MariaDBAppHandlerException(message="Unable to enter backup mode")
-        self.log_info(msg="DONE. Succesfully enabled MariaDB backup mode")
+        self.log_info(msg="DONE. successfully enabled MariaDB backup mode")
 
     def exit_backup_mode(self):
         self.log_info(msg="Disabling MariaDB backup mode...")
@@ -236,7 +236,7 @@ class MariaDBAppHandler(Loggable):
         except:
             self.log_err(err="Unable to disable backup mode. Check that the DB works well after the end of this process")
             raise MariaDBAppHandlerException(message="Unable to disable backup mode. Check that the DB works well after the end of this process")
-        self.log_info(msg="DONE. Succesfully disabled MariaDB backup mode")
+        self.log_info(msg="DONE. successfully disabled MariaDB backup mode")
 
     def create_actual_volume_snapshot(self, snapshot_name):
         self.log_info(msg="Creating the MariaDB volume snapshot with name " + snapshot_name + "...")
@@ -265,8 +265,8 @@ class MariaDBAppHandler(Loggable):
             except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
                 self.log_err(err="Unable to create the backup")
                 raise MariaDBAppHandlerException(message="Unable to create the backup. The issue is the following:\n" + e)
-            else:
-                self.log_err(err="MariaDB backup mode not enabled. Cannot continue with the backup creation")
+        else:
+            self.log_err(err="MariaDB backup mode not enabled. Cannot continue with the backup creation")
             raise MariaDBAppHandlerException(message="MariaDB backup mode not enabled. Cannot continue with the backup creation")
         self.log_info(msg="DONE. MariaDB volume backup from snapshot " + snapshot_name + " successfully created")
 
@@ -321,6 +321,6 @@ class MariaDBAppHandler(Loggable):
         else:
             self.log_err(err="Nextcloud maintenance mode not enabled. Cannot continue with the old snapshots and backups deletion")
             raise MariaDBAppHandlerException(message="Nextcloud maintenance mode not enabled. Cannot continue with the old backups and snapshots deletion")
-        self.log_info(msg="DONE. MariaDB oldest volume backups and snapshots succesfully deleted")
+        self.log_info(msg="DONE. MariaDB oldest volume backups and snapshots successfully deleted")
     ### END - Methods implementation###
 ### END - Handler ###

@@ -60,7 +60,7 @@ class MariaDBApiInstanceHandlerException(ApiInstancesHandlerException):
         
 class MariaDBApiInstanceHandler (Loggable):
     def __init__(self, config):
-        super().__init__(name="MARIADB-API   ")
+        super().__init__(name="MARIADB-API###", log_level=2)
 
         if config == None or type(config) != MariaDBApiInstanceConfig:
             self.log_err(err="the configuration object mustn't be None and must be a MariaDBApiInstanceConfig instance")
@@ -85,13 +85,13 @@ class MariaDBApiInstanceHandler (Loggable):
         try:
             self.log_info(msg="Retrieving the cursor from connection...")
             self.cur = self.conn.cursor()
-            self.log_info(msg="DONE. Cursor succesfully retrieved.")
+            self.log_info(msg="DONE. Cursor successfully retrieved.")
         except BaseException as e:
             self.log_err(err="Unable to retrieve the cursor")
             self.clean_conn()
             raise MariaDBApiInstanceHandlerException(message="Unable to retrieve the cursor. The error message is:\n" + e)
 
-        self.log_info(msg="MariaDB API succesfully initialized")
+        self.log_info(msg="MariaDB API successfully initialized")
 
         return self
 
@@ -105,21 +105,20 @@ class MariaDBApiInstanceHandler (Loggable):
     def clean_resources(self):
         try:
             self.clean_cur()
-            self.log_info(msg="MariaDB cursor succesfully closed")
-        except NameError:
+            self.log_info(msg="MariaDB cursor successfully closed")
+        except (AttributeError,NameError):
             pass
         except:
             self.log_err(err="Unable to close the MariaDB API cursor")
 
         try:
             self.clean_conn()
-            self.log_info(msg="MariaDB connection succesfully closed")
-        except NameError:
+            self.log_info(msg="MariaDB connection successfully closed")
+            self.log_info(msg="MariaDB API resources successfully cleaned up")
+        except (AttributeError,NameError):
             pass
         except:
             self.log_err(err="Unable to close the MariaDB API connection")
-
-        self.log_info(msg="MariaDB API resources succesfully cleaned up")
 
     def clean_cur(self):
         self.cur.close()
@@ -168,7 +167,7 @@ class MariaDBApiInstanceHandler (Loggable):
         self.log_info(msg="Executing the SQL command '" + command + "' on MariaDB...")
         try:
             res = self.cur.execute(command)
-            self.log_info(msg="DONE. SQL command succesfully executed")
+            self.log_info(msg="DONE. SQL command successfully executed")
             return res
         except BaseException as e:
             self.log_err(err="Unable to execute the SQL command '" + command + "'")

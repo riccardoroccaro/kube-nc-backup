@@ -1,4 +1,7 @@
 from kubencbackup.kubencbackup import KubeNCBackup
 
 if __name__ == '__main__':
-    exit(KubeNCBackup().main())
+    try:
+        exit(KubeNCBackup().main())
+    except:
+        pass

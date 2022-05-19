@@ -40,7 +40,7 @@ class K8sApiInstanceHandlerException(ApiInstancesHandlerException):
 
 class K8sApiInstanceHandler(Loggable):
     def __init__(self,conf):
-        super().__init__(name="KUBERNETES-API")
+        super().__init__(name="KUBERNETES-API", log_level=2)
         try:
             self.conf=conf
         except BaseException:
@@ -149,7 +149,7 @@ class K8sApiInstanceHandler(Loggable):
         # Creating exec command
         exec_command = ['/bin/bash', '-c', command]
 
-        self.log_info(msg="DONE. Executing the command "+ exec_command + " inside the pod...")
+        self.log_info(msg="DONE. Executing the command inside the pod...")
         # Calling exec and waiting for response
         try: 
             resp = stream(self.k8s_api_instance.connect_get_namespaced_pod_exec,
@@ -159,9 +159,9 @@ class K8sApiInstanceHandler(Loggable):
                         stderr=True, stdin=False,
                         stdout=True, tty=False)
         except BaseException as e:
-            self.log_err(err="Unable to execute the command " + exec_command )
+            self.log_err(err="Unable to execute the command " + command )
             raise K8sApiInstanceHandlerException(message="Unable to execute the command " + command +  ". The call returned this message:\n" + e)
-        self.log_info(msg="Done. Command succesfully executed")
+        self.log_info(msg="Done. Command successfully executed")
         return resp
     ### END - Methods implementation ###
 

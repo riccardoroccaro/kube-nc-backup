@@ -72,7 +72,7 @@ class LonghornApiInstanceHandlerException(ApiInstancesHandlerException):
 
 class LonghornApiInstanceHandler(Loggable):
     def __init__(self, config):
-        super().__init__(name="LONGHORN-API  ")
+        super().__init__(name="LONGHORN-API##", log_level=2)
 
         if config == None or type(config) != LonghornApiInstanceConfig:
             self.log_err(err="the configuration object mustn't be None and must be a LonghornApiInstanceConfig instance")
@@ -103,8 +103,8 @@ class LonghornApiInstanceHandler(Loggable):
     def free_resources(self):
         try:
             del(self.client)
-            self.log_info(msg="Longhorn API resources succesfully cleaned up")
-        except NameError:
+            self.log_info(msg="Longhorn API resources successfully cleaned up")
+        except (AttributeError,NameError):
             pass
         except:
             self.log_err(err="Unable to clean up the Longhorn API resources")
@@ -152,7 +152,7 @@ class LonghornApiInstanceHandler(Loggable):
             # Create the snapshot
             self.log_info(msg="DONE. Creating the snapshot...")
             volume.snapshotCreate(name=snapshot_name)
-            self.log_info(msg="DONE. Snapshot named " + snapshot_name + " for " + pv_name + " volume succesfully created")
+            self.log_info(msg="DONE. Snapshot named " + snapshot_name + " for " + pv_name + " volume successfully created")
 
         except BaseException as e:
             self.log_err(err="Unable to create the snapshot for the volume " + pv_name)
@@ -172,7 +172,7 @@ class LonghornApiInstanceHandler(Loggable):
             self.log_info(msg="Checking the snapshot " + snapshot_name + " existence...")
             for snap in volume.snapshotList().data:
                 if snap.name == snapshot_name:
-                    self.log_info(msg="DONE. Snapshot " + snapshot_name + " succesfully found")
+                    self.log_info(msg="DONE. Snapshot " + snapshot_name + " successfully found")
                     break
             else:
                 self.log_err(err="Unable to find the snapshot named " + snapshot_name +". The backup cannot be done")
@@ -180,8 +180,8 @@ class LonghornApiInstanceHandler(Loggable):
 
             # Create the backup
             self.log_info(msg="Creating the backup...")
-            bak = volume.snapshotBackup(name=snapshot_name)
-            self.log_info(msg="DONE. Backup named " + bak.name + " from snapshot " + snapshot_name + " for " + pv_name + " volume succesfully created")
+            volume.snapshotBackup(name=snapshot_name)
+            self.log_info(msg="DONE. Backup from snapshot " + snapshot_name + " for " + pv_name + " volume successfully created")
         except BaseException as e:
             self.log_err(err="Unable to create the backup for the volume " + pv_name)
             raise LonghornApiInstanceHandlerException(message="Unable to create the backup for the volume " + pv_name +". The error message is:\n" + e)
@@ -195,7 +195,7 @@ class LonghornApiInstanceHandler(Loggable):
 
 
     def delete_snapshots_over_retain_count(self, pv_name):
-        self.log_info("Deleting the snapshots older than the last " + self.config.nr_snapshots_to_retain + "...")
+        self.log_info("Deleting the snapshots older than the last " + str(self.config.nr_snapshots_to_retain) + "...")
         try:
             #Retrieve volume by name
             self.log_info(msg="Retrieving the volume " + pv_name + "...")
@@ -227,14 +227,14 @@ class LonghornApiInstanceHandler(Loggable):
                 # Remove the older snapshots
                 while len(keys) > self.config.nr_snapshots_to_retain:
                     vol.snapshotDelete(name=snaps_dict[keys.pop(0)])
-                self.log_info(msg="DONE. Succesfully removed the older snapshots for the volume " + pv_name)
+                self.log_info(msg="DONE. successfully removed the older snapshots for the volume " + pv_name)
         except BaseException as e:
             self.log_err(err="Cannot delete snapshots over retain count")
             raise LonghornApiInstanceHandlerException(message="Cannot delete snapshots over retain count due to the following issue:\n" +e)
 
 
     def delete_backups_over_retain_count(self, pv_name):
-        self.log_info("Deleting the backups older than the last " + self.config.nr_backups_to_retain + "...")
+        self.log_info("Deleting the backups older than the last " + str(self.config.nr_backups_to_retain) + "...")
         try:
             #Retrieve volume by name
             self.log_info(msg="Retrieving the volume " + pv_name + "...")
@@ -268,7 +268,7 @@ class LonghornApiInstanceHandler(Loggable):
                 # Remove the older backups
                 while len(keys) > self.config.nr_backups_to_retain:
                     vol.backupDelete(name=backs_dict[keys.pop(0)])
-                self.log_info(msg="DONE. Succesfully removed the older backups for the volume " + pv_name)
+                self.log_info(msg="DONE. successfully removed the older backups for the volume " + pv_name)
         except BaseException as e:
             self.log_err(err="Cannot delete backups over retain count")
             raise LonghornApiInstanceHandlerException(message="Cannot delete backups over retain count due to the following issue:\n" +e)

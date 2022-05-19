@@ -14,7 +14,7 @@ class BackupConfig(Loggable):
     DEFAULT_BACKUPS_TO_RETAIN = 4
 
     def __init__(self):
-        super().__init__("BACKUP-CONFIG ")
+        super().__init__(name="BACKUP-CONFIG#",log_level=1)
         
         self.backup_type=os.getenv('BACKUP_TYPE')
         self.namespace=os.getenv('NAMESPACE')
@@ -42,7 +42,7 @@ class BackupConfig(Loggable):
             self.log_err('Wrong backup type. "BACKUP_TYPE" environment variable is mandatory and must be either "FULL-BACKUP" or "SNAPSHOT"')
             raise BackupConfigException(message='Wrong backup type. "BACKUP_TYPE" environment variable is mandatory and must be either "FULL-BACKUP" or "SNAPSHOT"')
         self.__backup_type=backup_type
-        self.log_info("Succesfully retrieved BACKUP_TYPE as '" + backup_type + "'.")
+        self.log_info("successfully retrieved BACKUP_TYPE as '" + backup_type + "'.")
     ### END ###
 
     ### namespace getter and setter ###
@@ -57,7 +57,7 @@ class BackupConfig(Loggable):
             self.log_info("NAMESPACE env var not set. Using the default one: " + BackupConfig.DEFAULT_NAMESPACE)
         else:
             self.__namespace=namespace
-            self.log_info("Succesfully retrieved NAMESPACE as '" + namespace + "'.")
+            self.log_info("successfully retrieved NAMESPACE as '" + namespace + "'.")
     ### END ###
 
     ### app_name getter and setter ###
@@ -71,7 +71,7 @@ class BackupConfig(Loggable):
             self.log_err('"NEXTCLOUD_APP_NAME" environment variable is mandatory')
             raise BackupConfigException(message='"NEXTCLOUD_APP_NAME" environment variable is mandatory')
         self.__app_name=app_name
-        self.log_info("Succesfully retrieved NEXTCLOUD_APP_NAME as '" + app_name + "'.")
+        self.log_info("successfully retrieved NEXTCLOUD_APP_NAME as '" + app_name + "'.")
     ### END ###
 
     ### app_volume_name getter and setter ###
@@ -85,7 +85,7 @@ class BackupConfig(Loggable):
             self.log_err('"NEXTCLOUD_VOLUME_NAME" environment variable is mandatory')
             raise BackupConfigException(message='"NEXTCLOUD_VOLUME_NAME" environment variable is mandatory')
         self.__app_volume_name=app_volume_name
-        self.log_info("Succesfully retrieved NEXTCLOUD_VOLUME_NAME as '" + app_volume_name + "'.")
+        self.log_info("successfully retrieved NEXTCLOUD_VOLUME_NAME as '" + app_volume_name + "'.")
     ### END ###
 
     ### db_app_name getter and setter ###
@@ -99,7 +99,7 @@ class BackupConfig(Loggable):
             self.log_err('"MARIADB_APP_NAME" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_APP_NAME" environment variable is mandatory')
         self.__db_app_name=db_app_name
-        self.log_info("Succesfully retrieved MARIADB_APP_NAME as '" + db_app_name + "'.")
+        self.log_info("successfully retrieved MARIADB_APP_NAME as '" + db_app_name + "'.")
     ### END ###
 
     ### db_root_password getter and setter ###
@@ -113,7 +113,7 @@ class BackupConfig(Loggable):
             self.log_err('"MARIADB_DB_ROOT_PASSWORD" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_DB_ROOT_PASSWORD" environment variable is mandatory')
         self.__db_root_password=db_root_password
-        self.log_info("Succesfully retrieved MARIADB_DB_ROOT_PASSWORD.")
+        self.log_info("successfully retrieved MARIADB_DB_ROOT_PASSWORD.")
     ### END ###
 
     ### db_url getter and setter ###
@@ -127,7 +127,7 @@ class BackupConfig(Loggable):
             self.log_err('"MARIADB_URL" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_URL" environment variable is mandatory')
         self.__db_url=db_url
-        self.log_info("Succesfully retrieved MARIADB_URL as '" + db_url + "'.")
+        self.log_info("successfully retrieved MARIADB_URL as '" + db_url + "'.")
     ### END ###
 
     ### db_port getter and setter ###
@@ -142,7 +142,7 @@ class BackupConfig(Loggable):
             raise BackupConfigException(message='"MARIADB_PORT" environment variable is mandatory')
         try:
             self.__db_port=int(db_port)
-            self.log_info("Succesfully retrieved MARIADB_PORT as '" + db_port + "'.")
+            self.log_info("successfully retrieved MARIADB_PORT as '" + db_port + "'.")
         except (ValueError,TypeError) as e:
             self.log_err("'MARIADB_PORT' environment variable must be a integer number")
             raise BackupConfigException(message="'MARIADB_PORT' environment variable must be a integer number")
@@ -160,7 +160,7 @@ class BackupConfig(Loggable):
             self.log_err('"MARIADB_ACTUAL_VOLUME_NAME" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_ACTUAL_VOLUME_NAME" environment variable is mandatory')
         self.__db_actual_volume_name=db_actual_volume_name
-        self.log_info("Succesfully retrieved MARIADB_ACTUAL_VOLUME_NAME as '" + db_actual_volume_name + "'.")
+        self.log_info("successfully retrieved MARIADB_ACTUAL_VOLUME_NAME as '" + db_actual_volume_name + "'.")
     ### END ###
     
     ### db_backup_volume_name getter and setter ###
@@ -174,7 +174,7 @@ class BackupConfig(Loggable):
             self.log_err('"MARIADB_BACKUP_VOLUME_NAME" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_BACKUP_VOLUME_NAME" environment variable is mandatory')
         self.__db_backup_volume_name=db_backup_volume_name
-        self.log_info("Succesfully retrieved MARIADB_BACKUP_VOLUME_NAME as '" + db_backup_volume_name + "'.")
+        self.log_info("successfully retrieved MARIADB_BACKUP_VOLUME_NAME as '" + db_backup_volume_name + "'.")
     ### END ###
     
     ### db_backup_file_path getter and setter ###
@@ -188,7 +188,7 @@ class BackupConfig(Loggable):
             self.log_err('"MARIADB_BACKUP_FILE_PATH" environment variable is mandatory')
             raise BackupConfigException(message='"MARIADB_BACKUP_FILE_PATH" environment variable is mandatory')
         self.__db_backup_file_path=db_backup_file_path
-        self.log_info("Succesfully retrieved MARIADB_BACKUP_FILE_PATH as '" + db_backup_file_path + "'.")
+        self.log_info("successfully retrieved MARIADB_BACKUP_FILE_PATH as '" + db_backup_file_path + "'.")
     ### END ###
     
     ### longhorn_url getter and setter ###
@@ -202,7 +202,7 @@ class BackupConfig(Loggable):
             self.log_err('"LONGHORN_URL" environment variable is mandatory')
             raise BackupConfigException(message='"LONGHORN_URL" environment variable is mandatory')
         self.__longhorn_url=longhorn_url
-        self.log_info("Succesfully retrieved LONGHORN_URL as '" + longhorn_url + "'.")
+        self.log_info("successfully retrieved LONGHORN_URL as '" + longhorn_url + "'.")
     ### END ###
 
     ### nr_snapshots_to_retain getter and setter ###
@@ -218,7 +218,7 @@ class BackupConfig(Loggable):
         else:
             try:
                 self.__nr_snapshots_to_retain = int(nr_snapshots_to_retain)
-                self.log_info("Succesfully retrieved NR_SNAPSHOTS_TO_RETAIN as '" + nr_snapshots_to_retain + "'.")
+                self.log_info("successfully retrieved NR_SNAPSHOTS_TO_RETAIN as '" + nr_snapshots_to_retain + "'.")
             except (ValueError,TypeError) as e:
                 self.log_err("'NR_SNAPSHOTS_TO_RETAIN' environment variable must be a integer number")
                 raise BackupConfigException(message="NR_SNAPSHOTS_TO_RETAIN environment variable must be a integer number")
@@ -237,7 +237,7 @@ class BackupConfig(Loggable):
         else:
             try:
                 self.__nr_backups_to_retain = int(nr_backups_to_retain)
-                self.log_info("Succesfully retrieved NR_BACKUPS_TO_RETAIN as '" + nr_backups_to_retain + "'.")
+                self.log_info("successfully retrieved NR_BACKUPS_TO_RETAIN as '" + nr_backups_to_retain + "'.")
             except (ValueError,TypeError) as e:
                 self.log_err("'NR_BACKUPS_TO_RETAIN' environment variable must be a integer number")
                 raise BackupConfigException(message="NR_BACKUPS_TO_RETAIN environment variable must be a integer number")

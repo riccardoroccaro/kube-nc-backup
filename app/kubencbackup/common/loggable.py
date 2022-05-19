@@ -8,7 +8,12 @@ class Loggable:
     def __init__(self, name=None, log_level=0):
         self.name = name
         self.log_level = log_level
-        self.log_depth = os.getenv('LOG-DEPTH')
+
+        self.__indent_str = ""
+        for i in range(0,log_level):
+            self.__indent_str += "  "
+
+        self.log_depth = os.getenv('LOG_DEPTH')
 
     @property
     def name(self):
@@ -52,7 +57,7 @@ class Loggable:
 
     def log_info(self, msg):
         if self.log_level <= self.log_depth:
-            prefix = Loggable.__prefix("["+self.name+"][INFO]: ")
+            prefix = Loggable.__prefix(self.__indent_str + "["+self.name+"][INFO]: ")
             wrapper = textwrap.TextWrapper(
                 initial_indent=prefix,
                 width=180,
@@ -61,7 +66,7 @@ class Loggable:
 
     def log_err(self, err):
         if self.log_level <= self.log_depth:
-            prefix = Loggable.__prefix("["+self.name+"][ERR ]: ")
+            prefix = Loggable.__prefix(self.__indent_str + "["+self.name+"][ERR ]: ")
             wrapper = textwrap.TextWrapper(
                 initial_indent=prefix,
                 width=180,

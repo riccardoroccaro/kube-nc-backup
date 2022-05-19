@@ -24,7 +24,7 @@ class KubeNCBackup(Loggable):
 
             backup_config = BackupConfig()
 
-            self.log_info("DONE. Configurations succesfully retrieved.")
+            self.log_info("DONE. Configurations successfully retrieved.")
         except BackupConfigException as bce:
             self.log_err("Cannot retrieve the config environment variables.")
             return(1)
@@ -96,7 +96,7 @@ class KubeNCBackup(Loggable):
                             self.log_info("DONE. Cleaning up MariaDB old snapshots and backups...")
                             mdbah.delete_backups_and_snapshots_over_retain_count()
 
-                            self.log_info("DONE. Snapshots and backups processes succesfully completed. Cleaning up the allocated resources...")
+                            self.log_info("DONE. Snapshots and backups processes successfully completed. Cleaning up the allocated resources...")
 
                         except AppHandlerException as ahe:
                             self.log_err("Unable to complete the snapshots and backups processes due to the following issue: " + ahe.message)
@@ -110,5 +110,5 @@ class KubeNCBackup(Loggable):
         except:
             return 1
 
-        self.log_info(msg="DONE. Process completed. BYE!")
+        self.log_info(msg="DONE. Process completed without errors. BYE!")
         return 0

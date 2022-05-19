@@ -54,7 +54,7 @@ class NextcloudAppHandler(Loggable):
     __EXIT_MAINTENANCE_CMD='runuser -u www-data -- php occ maintenance:mode --off'
 
     def __init__(self, config, k8s_api, longhorn_api):
-        super().__init__(name="NEXTCLOUD-APP ")
+        super().__init__(name="NEXTCLOUD-APP#", log_level=1)
 
         self.log_info(msg="Initializing Nextcloud App Handler...")
         try:
@@ -71,7 +71,7 @@ class NextcloudAppHandler(Loggable):
         try:
             self.log_info(msg="Entering Nextcloud maintenance mode...")
             self.enter_maintenance_mode()
-            self.log_info(msg="DONE. Succesfully entered Nextcloud maintenance mode")
+            self.log_info(msg="DONE. successfully entered Nextcloud maintenance mode")
         except NextcloudAppHandlerException as e:
             self.log_err(err="Unable to enter Nextcloud maintenance mode")
             self.clean_resources()
@@ -90,7 +90,7 @@ class NextcloudAppHandler(Loggable):
             try:
                 self.log_info(msg="Exiting Nextcloud maintenance mode...")
                 self.exit_maintenance_mode()
-                self.log_info(msg="Succesfully exited Nextcloud maintenance mode")
+                self.log_info(msg="successfully exited Nextcloud maintenance mode")
             except:
                 self.log_err(err="Unable to exit Nextcloud maintenance mode. You have to do it on your own")
     
@@ -155,7 +155,7 @@ class NextcloudAppHandler(Loggable):
             raise NextcloudAppHandlerException(message="Unable to enter maintenance mode. The issue is the following:\n" + resp)
 
         self.__is_maintenance_mode_enabled = True
-        self.log_info(msg="DONE. Nextcloud maintenance mode succesfully enabled")
+        self.log_info(msg="DONE. Nextcloud maintenance mode successfully enabled")
 
     def exit_maintenance_mode(self):
         self.log_info(msg="Disabling Netcloud maintenance mode...")
@@ -170,7 +170,7 @@ class NextcloudAppHandler(Loggable):
             raise NextcloudAppHandlerException(message="Unable to exit maintenance mode. You have to do it by hands. The issue is the following:\n" + resp)
 
         self.__is_maintenance_mode_enabled = False
-        self.log_info(msg="DONE. Nextcloud maintenance mode succesfully disabled")
+        self.log_info(msg="DONE. Nextcloud maintenance mode successfully disabled")
 
     def create_volume_snapshot(self, snapshot_name):
         self.log_info(msg="Creating the nextcloud volume snapshot with name " + snapshot_name + "...")
@@ -217,6 +217,6 @@ class NextcloudAppHandler(Loggable):
         else:
             self.log_err(err="Nextcloud maintenance mode not enabled. Cannot continue with the old snapshots and backups deletion")
             raise NextcloudAppHandlerException(message="Nextcloud maintenance mode not enabled. Cannot continue with the old backups and snapshots deletion")
-        self.log_info(msg="DONE. Nextcloud oldest volume backups and snapshots succesfully deleted")
+        self.log_info(msg="DONE. Nextcloud oldest volume backups and snapshots successfully deleted")
     ### END - Methods implementation###
 ### END - Handler ###
