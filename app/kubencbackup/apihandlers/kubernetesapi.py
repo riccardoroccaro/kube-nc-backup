@@ -1,3 +1,5 @@
+import os
+
 from kubernetes import config
 from kubernetes.client import Configuration
 from kubernetes.client.api import core_v1_api
@@ -45,13 +47,26 @@ class K8sApiInstanceHandler(Loggable):
             self.conf=conf
         except BaseException:
             raise K8sApiInstanceHandlerException(message="Error creating Kubernetes API client instance")
+
+        # Init in-cluster mode
+        try:
+            if os.getenv("IN_CLUSTER_MODE").lower() != "false":
+                self.__in_cluster_mode = True
+            else:
+                self.__in_cluster_mode = False
+        except:
+            self.__in_cluster_mode = True
             
     def __enter__(self):
         self.log_info(msg="Initializing Kubernetes API...")
         try:
             # Load and set KUBECONFIG
             self.log_info(msg="Loading config...")
-            config.load_kube_config()
+            if self.in_cluster_mode:
+                config.load_incluster_config()
+            else:
+                config.load_kube_config()
+            
             try:
                 c = Configuration().get_default_copy()
             except AttributeError:
@@ -112,6 +127,11 @@ class K8sApiInstanceHandler(Loggable):
         self.__conf=conf
     ### END - conf ###
 
+    ### in_cluster_mode getter###
+    @property
+    def in_cluster_mode(self):
+        return self.__in_cluster_mode
+    ### END ###
 
     ### Methods implementation ###
     def get_pod_by_label(self, label):
