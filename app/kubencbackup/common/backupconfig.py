@@ -146,6 +146,9 @@ class BackupConfig(Loggable):
         except (ValueError,TypeError) as e:
             self.log_err("'MARIADB_PORT' environment variable must be a integer number")
             raise BackupConfigException(message="'MARIADB_PORT' environment variable must be a integer number")
+        except:
+            self.log_err("Unknown error while retireving 'MARIADB_PORT' environment variable")
+            raise BackupConfigException(message="Unknown error while retireving 'MARIADB_PORT' environment variable")
         
     ### END ###
 
@@ -222,6 +225,9 @@ class BackupConfig(Loggable):
             except (ValueError,TypeError) as e:
                 self.log_err("'NR_SNAPSHOTS_TO_RETAIN' environment variable must be a integer number")
                 raise BackupConfigException(message="NR_SNAPSHOTS_TO_RETAIN environment variable must be a integer number")
+            except:
+                self.log_err("Unknown error while retireving 'NR_SNAPSHOTS_TO_RETAIN' environment variable")
+                raise BackupConfigException(message="Unknown error while retireving 'NR_SNAPSHOTS_TO_RETAIN' environment variable")
     ### END ###
 
     ### nr_backups_to_retain getter and setter ###
@@ -241,4 +247,7 @@ class BackupConfig(Loggable):
             except (ValueError,TypeError) as e:
                 self.log_err("'NR_BACKUPS_TO_RETAIN' environment variable must be a integer number")
                 raise BackupConfigException(message="NR_BACKUPS_TO_RETAIN environment variable must be a integer number")
+            except:
+                self.log_err("Unknown error while retireving 'NR_BACKUPS_TO_RETAIN' environment variable")
+                raise BackupConfigException(message="Unknown error while retireving 'NR_BACKUPS_TO_RETAIN' environment variable")
     ### END ###
