@@ -45,8 +45,12 @@ class K8sApiInstanceHandler(Loggable):
         super().__init__(name="KUBERNETES-API", log_level=2)
         try:
             self.conf=conf
-        except BaseException:
+        except K8sApiInstanceHandlerException as e:
+            self.log_err("Error creating Kubernetes API client instance: " + str(e))
             raise K8sApiInstanceHandlerException(message="Error creating Kubernetes API client instance")
+        except:
+            self.log_err("Unknown error while creating Kubernetes API client instance")
+            raise K8sApiInstanceHandlerException(message="Unknown error while creating Kubernetes API client instance")
 
         # Init in-cluster mode
         try:
@@ -78,10 +82,14 @@ class K8sApiInstanceHandler(Loggable):
             self.k8s_api_instance = core_v1_api.CoreV1Api()
 
             self.log_info(msg="DONE. Kubernetes API successfully initialized.")
-        except (BaseException,ApiException):
+        except ApiException:
             self.log_err(err="Error creating Kubernetes API client instance")
             self.free_resources()
             raise K8sApiInstanceHandlerException(message="Error creating Kubernetes API client instance")
+        except:
+            self.log_err(err="Unknown error while creating Kubernetes API client instance")
+            self.free_resources()
+            raise K8sApiInstanceHandlerException(message="Unknown error while creating Kubernetes API client instance")
         
         return self
 
@@ -144,7 +152,10 @@ class K8sApiInstanceHandler(Loggable):
         except ApiException as e:
             if e.status != 404:
                 self.log_err(err="Unknown Kubernetes API error")
-                raise K8sApiInstanceHandlerException(message="Unknown error: "+e)
+                raise K8sApiInstanceHandlerException(message="Unknown Kubernetes API error")
+        except:
+            self.log_err(err="Unknown error")
+            raise K8sApiInstanceHandlerException(message="Unknown error")
         
         if (resp is None) or (len(resp.items) != 1):
             self.log_err(err="There are too many pods with the label " + label + " or there isn't any. Just one pod must be present.")
@@ -156,9 +167,12 @@ class K8sApiInstanceHandler(Loggable):
         try:
             self.log_info("Retrieving the PV by PVC name " + pvc_name)
             pvc=self.k8s_api_instance.read_namespaced_persistent_volume_claim(namespace=self.conf.namespace, name=pvc_name)
-        except BaseException:
-            self.log_err(err="Error retrieving PV name by PVC name "+ pvc_name)
-            raise K8sApiInstanceHandlerException(message="Error retrieving Persistent Volume name from Persistent Volume Claim "+ pvc_name)
+        except ApiException:
+            self.log_err(err="Kubernetes API error retrieving PV name by PVC name "+ pvc_name)
+            raise K8sApiInstanceHandlerException(message="Kubernetes API error retrieving Persistent Volume name from Persistent Volume Claim "+ pvc_name)
+        except:
+            self.log_err(err="Unknown error while retrieving PV name by PVC name "+ pvc_name)
+            raise K8sApiInstanceHandlerException(message="Unknown error while retrieving Persistent Volume name from Persistent Volume Claim "+ pvc_name)
         return pvc.spec.volume_name
 
     def exec_container_command(self, pod_label, command):
@@ -181,11 +195,13 @@ class K8sApiInstanceHandler(Loggable):
                         command=exec_command,
                         stderr=True, stdin=False,
                         stdout=True, tty=False)
-        except BaseException as e:
-            self.log_err(err="Unable to execute the command " + command )
-            raise K8sApiInstanceHandlerException(message="Unable to execute the command " + command +  ". The call returned this message:\n" + e)
+        except ApiException as e:
+            self.log_err(err="Kubernetes API error. Unable to execute the command")
+            raise K8sApiInstanceHandlerException(message="Kubernetes API error. Unable to execute the command")
+        except:
+            self.log_err(err="Unknown error. Unable to execute the command")
+            raise K8sApiInstanceHandlerException(message="Unknown error. Unable to execute the command")
         self.log_info(msg="Done. Command successfully executed")
         return resp
     ### END - Methods implementation ###
-
 ### END - Handler ###
