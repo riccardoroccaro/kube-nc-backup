@@ -37,7 +37,7 @@ class Loggable:
     def log_level(self, log_level):
         try:
             self.__log_level = int (log_level)
-        except (ValueError,TypeError):
+        except:
             self.__log_level=0
 
     @property
@@ -48,7 +48,7 @@ class Loggable:
     def log_depth(self, log_depth):
         try:
             self.__log_depth = int (log_depth)
-        except (ValueError,TypeError):
+        except:
             self.__log_depth=100
 
     def __prefix(prefix):
