@@ -44,6 +44,7 @@ class K8sApiInstanceHandler(Loggable):
     def __init__(self,conf):
         super().__init__(name="KUBERNETES-API", log_level=2)
         try:
+            self.__is_connection_initialized = False
             self.conf=conf
         except K8sApiInstanceHandlerException as e:
             self.log_err("Error creating Kubernetes API client instance: " + str(e))
@@ -90,6 +91,8 @@ class K8sApiInstanceHandler(Loggable):
             self.log_err(err="Unknown error while creating Kubernetes API client instance")
             self.free_resources()
             raise K8sApiInstanceHandlerException(message="Unknown error while creating Kubernetes API client instance")
+
+        self.__is_connection_initialized = True
         
         return self
 
@@ -103,6 +106,7 @@ class K8sApiInstanceHandler(Loggable):
         try:
             del(self.k8s_api_instance)
             self.log_info(msg="Kubernetes API resources succesfully cleaned up")
+            self.__is_connection_initialized = False
         except (AttributeError,NameError):
             pass
         except:
@@ -141,67 +145,85 @@ class K8sApiInstanceHandler(Loggable):
         return self.__in_cluster_mode
     ### END ###
 
+    ### is_connection_initialized getter###
+    @property
+    def is_connection_initialized(self):
+        return self.__is_connection_initialized
+    ### END ###
+
     ### Methods implementation ###
     def get_pod_by_label(self, label):
-        resp = None
+        if self.is_connection_initialized:
+            resp = None
 
-        self.log_info(msg="Retrieving the pod by label and checking that there is just one pod having that label")
-        # Retrieving pod and checking that there is just one pod having that label
-        try:
-            resp = self.k8s_api_instance.list_namespaced_pod(namespace=self.conf.namespace, label_selector=label)
-        except ApiException as e:
-            if e.status != 404:
-                self.log_err(err="Unknown Kubernetes API error")
-                raise K8sApiInstanceHandlerException(message="Unknown Kubernetes API error")
-        except:
-            self.log_err(err="Unknown error")
-            raise K8sApiInstanceHandlerException(message="Unknown error")
-        
-        if (resp is None) or (len(resp.items) != 1):
-            self.log_err(err="There are too many pods with the label " + label + " or there isn't any. Just one pod must be present.")
-            raise K8sApiInstanceHandlerException(message="There are too many pods with the label " + label + " or there isn't any. Just one pod must be present.")
+            self.log_info(msg="Retrieving the pod by label and checking that there is just one pod having that label")
+            # Retrieving pod and checking that there is just one pod having that label
+            try:
+                resp = self.k8s_api_instance.list_namespaced_pod(namespace=self.conf.namespace, label_selector=label)
+            except ApiException as e:
+                if e.status != 404:
+                    self.log_err(err="Unknown Kubernetes API error")
+                    raise K8sApiInstanceHandlerException(message="Unknown Kubernetes API error")
+            except:
+                self.log_err(err="Unknown error")
+                raise K8sApiInstanceHandlerException(message="Unknown error")
+            
+            if (resp is None) or (len(resp.items) != 1):
+                self.log_err(err="There are too many pods with the label " + label + " or there isn't any. Just one pod must be present.")
+                raise K8sApiInstanceHandlerException(message="There are too many pods with the label " + label + " or there isn't any. Just one pod must be present.")
+            else:
+                return resp.items.pop()
         else:
-            return resp.items.pop()
+            self.log_err("Connection to Kubernetes API not initialized")
+            raise K8sApiInstanceHandlerException(message="Connection to Kubernetes API not initialized")
     
     def get_pv_name_from_pvc_name(self,pvc_name):
-        try:
-            self.log_info("Retrieving the PV by PVC name " + pvc_name)
-            pvc=self.k8s_api_instance.read_namespaced_persistent_volume_claim(namespace=self.conf.namespace, name=pvc_name)
-        except ApiException:
-            self.log_err(err="Kubernetes API error retrieving PV name by PVC name "+ pvc_name)
-            raise K8sApiInstanceHandlerException(message="Kubernetes API error retrieving Persistent Volume name from Persistent Volume Claim "+ pvc_name)
-        except:
-            self.log_err(err="Unknown error while retrieving PV name by PVC name "+ pvc_name)
-            raise K8sApiInstanceHandlerException(message="Unknown error while retrieving Persistent Volume name from Persistent Volume Claim "+ pvc_name)
-        return pvc.spec.volume_name
+        if self.is_connection_initialized:
+            try:
+                self.log_info("Retrieving the PV by PVC name " + pvc_name)
+                pvc=self.k8s_api_instance.read_namespaced_persistent_volume_claim(namespace=self.conf.namespace, name=pvc_name)
+            except ApiException:
+                self.log_err(err="Kubernetes API error retrieving PV name by PVC name "+ pvc_name)
+                raise K8sApiInstanceHandlerException(message="Kubernetes API error retrieving Persistent Volume name from Persistent Volume Claim "+ pvc_name)
+            except:
+                self.log_err(err="Unknown error while retrieving PV name by PVC name "+ pvc_name)
+                raise K8sApiInstanceHandlerException(message="Unknown error while retrieving Persistent Volume name from Persistent Volume Claim "+ pvc_name)
+            return pvc.spec.volume_name
+        else:
+            self.log_err("Connection to Kubernetes API not initialized")
+            raise K8sApiInstanceHandlerException(message="Connection to Kubernetes API not initialized")
 
     def exec_container_command(self, pod_label, command):
-        # Retrieving the pod and checking that is in "Running" state
-        self.log_info(msg="Retrieving the pod and checking it is in Running state....")
-        pod = self.get_pod_by_label(label=pod_label)
-        if pod.status.phase != 'Running':
-            self.log_err(err="The pod with label " + pod_label + " is not in 'Running' state.")
-            raise K8sApiInstanceHandlerException(message="The pod with label " + pod_label + " is not in 'Running' state.")
-        
-        # Creating exec command
-        exec_command = ['/bin/bash', '-c', command]
+        if self.is_connection_initialized:
+            # Retrieving the pod and checking that is in "Running" state
+            self.log_info(msg="Retrieving the pod and checking it is in Running state....")
+            pod = self.get_pod_by_label(label=pod_label)
+            if pod.status.phase != 'Running':
+                self.log_err(err="The pod with label " + pod_label + " is not in 'Running' state.")
+                raise K8sApiInstanceHandlerException(message="The pod with label " + pod_label + " is not in 'Running' state.")
+            
+            # Creating exec command
+            exec_command = ['/bin/bash', '-c', command]
 
-        self.log_info(msg="DONE. Executing the command inside the pod...")
-        # Calling exec and waiting for response
-        try: 
-            resp = stream(self.k8s_api_instance.connect_get_namespaced_pod_exec,
-                        pod.metadata.name,
-                        namespace=self.conf.namespace,
-                        command=exec_command,
-                        stderr=True, stdin=False,
-                        stdout=True, tty=False)
-        except ApiException as e:
-            self.log_err(err="Kubernetes API error. Unable to execute the command")
-            raise K8sApiInstanceHandlerException(message="Kubernetes API error. Unable to execute the command")
-        except:
-            self.log_err(err="Unknown error. Unable to execute the command")
-            raise K8sApiInstanceHandlerException(message="Unknown error. Unable to execute the command")
-        self.log_info(msg="Done. Command successfully executed")
-        return resp
+            self.log_info(msg="DONE. Executing the command inside the pod...")
+            # Calling exec and waiting for response
+            try: 
+                resp = stream(self.k8s_api_instance.connect_get_namespaced_pod_exec,
+                            pod.metadata.name,
+                            namespace=self.conf.namespace,
+                            command=exec_command,
+                            stderr=True, stdin=False,
+                            stdout=True, tty=False)
+            except ApiException as e:
+                self.log_err(err="Kubernetes API error. Unable to execute the command")
+                raise K8sApiInstanceHandlerException(message="Kubernetes API error. Unable to execute the command")
+            except:
+                self.log_err(err="Unknown error. Unable to execute the command")
+                raise K8sApiInstanceHandlerException(message="Unknown error. Unable to execute the command")
+            self.log_info(msg="Done. Command successfully executed")
+            return resp
+        else:
+            self.log_err("Connection to Kubernetes API not initialized")
+            raise K8sApiInstanceHandlerException(message="Connection to Kubernetes API not initialized")
     ### END - Methods implementation ###
 ### END - Handler ###
