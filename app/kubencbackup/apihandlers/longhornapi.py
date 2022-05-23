@@ -31,7 +31,6 @@ class LonghornApiInstanceConfig:
     @longhorn_url.setter
     def longhorn_url(self,longhorn_url):
         if longhorn_url == None:
-            self.log_err("longhorn_url is mandatory")
             raise LonghornApiInstanceConfigException(message='longhorn_url is mandatory')
         self.__longhorn_url=longhorn_url
     ### END ###
@@ -49,10 +48,8 @@ class LonghornApiInstanceConfig:
             try:
                 self.__nr_snapshots_to_retain = int(nr_snapshots_to_retain)
             except (ValueError,TypeError):
-                self.log_err("nr_snapshot_to_retain must be a integer number")
                 raise LonghornApiInstanceConfigException(message="nr_snapshot_to_retain must be a integer number")
             except:
-                self.log_err("Unknown error while setting nr_snapshot_to_retain")
                 raise LonghornApiInstanceConfigException(message="Unknown error while setting nr_snapshot_to_retain")
     ### END ###
 
@@ -69,10 +66,8 @@ class LonghornApiInstanceConfig:
             try:
                 self.__nr_backups_to_retain = int(nr_backups_to_retain)
             except (ValueError,TypeError):
-                self.log_err("nr_backups_to_retain must be a integer number")
                 raise LonghornApiInstanceConfigException(message="nr_backups_to_retain must be a integer number")
             except:
-                self.log_err("Unknown error while setting nr_backups_to_retain")
                 raise LonghornApiInstanceConfigException(message="Unknown error while setting nr_backups_to_retain")
     ### END ###
 

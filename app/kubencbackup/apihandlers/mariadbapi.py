@@ -25,7 +25,6 @@ class MariaDBApiInstanceConfig:
     @db_root_password.setter
     def db_root_password(self,db_root_password):
         if db_root_password == None:
-            self.log_err('db_root_password is mandatory')
             raise MariaDBApiInstanceConfigException(message='db_root_password is mandatory')
         self.__db_root_password=db_root_password
     ### END ###
@@ -38,7 +37,6 @@ class MariaDBApiInstanceConfig:
     @db_url.setter
     def db_url(self,db_url):
         if db_url == None:
-            self.log_err('db_url is mandatory')
             raise MariaDBApiInstanceConfigException(message='db_url is mandatory')
         self.__db_url=db_url
     ### END ###
@@ -53,10 +51,8 @@ class MariaDBApiInstanceConfig:
         try:
             self.__db_port=int(db_port)
         except (ValueError,TypeError):
-            self.log_err("db_port is mandatory and must be a integer number")
             raise MariaDBApiInstanceConfigException(message="db_port is mandatory and must be a integer number")
         except:
-            self.log_err("Unknown error while setting db_port")
             raise MariaDBApiInstanceConfigException(message="Unknown error while setting db_port")
     ### END ###
 
