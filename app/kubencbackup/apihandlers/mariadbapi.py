@@ -1,3 +1,5 @@
+import functools
+
 import mariadb
 
 from kubencbackup.common.backupexceptions import ApiInstancesConfigException, ApiInstancesHandlerException
@@ -23,6 +25,7 @@ class MariaDBApiInstanceConfig:
     @db_root_password.setter
     def db_root_password(self,db_root_password):
         if db_root_password == None:
+            self.log_err('db_root_password is mandatory')
             raise MariaDBApiInstanceConfigException(message='db_root_password is mandatory')
         self.__db_root_password=db_root_password
     ### END ###
@@ -35,6 +38,7 @@ class MariaDBApiInstanceConfig:
     @db_url.setter
     def db_url(self,db_url):
         if db_url == None:
+            self.log_err('db_url is mandatory')
             raise MariaDBApiInstanceConfigException(message='db_url is mandatory')
         self.__db_url=db_url
     ### END ###
@@ -46,12 +50,29 @@ class MariaDBApiInstanceConfig:
     
     @db_port.setter
     def db_port(self,db_port):
-        if db_port == None:
-            raise MariaDBApiInstanceConfigException(message='db_port is mandatory')
-        self.__db_port=db_port
+        try:
+            self.__db_port=int(db_port)
+        except (ValueError,TypeError):
+            self.log_err("db_port is mandatory and must be a integer number")
+            raise MariaDBApiInstanceConfigException(message="db_port is mandatory and must be a integer number")
+        except:
+            self.log_err("Unknown error while setting db_port")
+            raise MariaDBApiInstanceConfigException(message="Unknown error while setting db_port")
     ### END ###
 
 ### END - Config ###
+
+### Methods decorator ###
+def exec_only_if_conn_init(method):
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if self.is_connection_initialized:
+            method(self, *args, **kwargs)
+        else:
+            self.log_err("Connection to MariaDB API not initialized")
+            raise MariaDBApiInstanceConfigException(message="Connection to MariaDB API not initialized")
+    return wrapper
+### END ###
 
 ### Handler ###
 class MariaDBApiInstanceHandlerException(ApiInstancesHandlerException):
@@ -61,6 +82,8 @@ class MariaDBApiInstanceHandlerException(ApiInstancesHandlerException):
 class MariaDBApiInstanceHandler (Loggable):
     def __init__(self, config):
         super().__init__(name="MARIADB-API###", log_level=2)
+
+        self.__is_connection_initialized = False
 
         if config == None or type(config) != MariaDBApiInstanceConfig:
             self.log_err(err="the configuration object mustn't be None and must be a MariaDBApiInstanceConfig instance")
@@ -78,20 +101,29 @@ class MariaDBApiInstanceHandler (Loggable):
                 password=self.__config.db_root_password,
                 autocommit=True)
             self.log_info(msg="DONE. Connection to MariaDB successfully initialized.")
-        except mariadb.Error as e:
-            self.log_err(err="Unable to connect to MariaDB")
-            raise MariaDBApiInstanceHandlerException(message="Error connecting to the database. The error message is:\n" + e)
+        except mariadb.Error:
+            self.log_err(err="MariaDB API error connecting to the database. Unable to connect to MariaDB")
+            raise MariaDBApiInstanceHandlerException(message="MariaDB API error connecting to the database. Unable to connect to MariaDB")
+        except:
+            self.log_err(err="Unknown error while connecting to the database. Unable to connect to MariaDB")
+            raise MariaDBApiInstanceHandlerException(message="Unknown error while connecting to the database. Unable to connect to MariaDB")
         
         try:
             self.log_info(msg="Retrieving the cursor from connection...")
             self.cur = self.conn.cursor()
             self.log_info(msg="DONE. Cursor successfully retrieved.")
-        except BaseException as e:
-            self.log_err(err="Unable to retrieve the cursor")
+        except mariadb.Error:
+            self.log_err(err="MariaDB API error: unable to retrieve the cursor")
             self.clean_conn()
-            raise MariaDBApiInstanceHandlerException(message="Unable to retrieve the cursor. The error message is:\n" + e)
+            raise MariaDBApiInstanceHandlerException(message="MariaDB API error: unable to retrieve the cursor")
+        except:
+            self.log_err(err="Unknownw error: unable to retrieve the cursor")
+            self.clean_conn()
+            raise MariaDBApiInstanceHandlerException(message="Unknownw error: unable to retrieve the cursor")
 
         self.log_info(msg="MariaDB API successfully initialized")
+
+        self.__is_connection_initialized = True
 
         return self
 
@@ -106,6 +138,7 @@ class MariaDBApiInstanceHandler (Loggable):
         try:
             self.clean_cur()
             self.log_info(msg="MariaDB cursor successfully closed")
+            self.__is_connection_initialized = False
         except (AttributeError,NameError):
             pass
         except:
@@ -162,15 +195,25 @@ class MariaDBApiInstanceHandler (Loggable):
         del(self.__cur)
     ### END ###
 
+    ### is_connection_initialized getter###
+    @property
+    def is_connection_initialized(self):
+        return self.__is_connection_initialized
+    ### END ###
+
     ### Methods implementation ###
+    @exec_only_if_conn_init
     def exec_sql_command(self, command):
         self.log_info(msg="Executing the SQL command '" + command + "' on MariaDB...")
         try:
             res = self.cur.execute(command)
             self.log_info(msg="DONE. SQL command successfully executed")
             return res
-        except BaseException as e:
-            self.log_err(err="Unable to execute the SQL command '" + command + "'")
-            raise MariaDBApiInstanceHandlerException(message="Unable to execute command '" + command + "' . The error message is:\n" + e)
+        except mariadb.Error:
+            self.log_err(err="MariaDB API error: unable to execute the SQL command '" + command + "'")
+            raise MariaDBApiInstanceHandlerException(message="MariaDB API error: unable to execute the SQL command '" + command + "'")
+        except:
+            self.log_err(err="Unknown error: unable to execute the SQL command '" + command + "'")
+            raise MariaDBApiInstanceHandlerException(message="Unknown error: unable to execute the SQL command '" + command + "'")
     ### END ###
 ### END - Handler ###
