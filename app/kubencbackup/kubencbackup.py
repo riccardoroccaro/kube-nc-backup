@@ -62,8 +62,8 @@ class KubeNCBackup(Loggable):
         else:
             return (6, "Unknown exit status")
 
-    def __print_msg_return_status(self):
-        self.log_info(self.__get_return_value_message()[1])
+    def __print_err_return_status(self):
+        self.log_err(self.__get_return_value_message()[1])
         if self.debug_mode_enabled:
             traceback.print_exception(*sys.exc_info())
 
@@ -77,7 +77,7 @@ class KubeNCBackup(Loggable):
             self.log_info("DONE. Configurations successfully retrieved.")
         except:
             self.log_err("Cannot retrieve the config environment variables.")
-            self.__print_msg_return_status()
+            self.__print_err_return_status()
             return self.__get_return_value_message()[0]
 
         # Init kubernetes, longhorn and mariadb api handlers with their correspondent connections
@@ -116,11 +116,11 @@ class KubeNCBackup(Loggable):
                         self.__process_step += 1
                     except NextcloudAppHandlerException:
                         self.log_err(err="Unable to create cthe nextcloud volume snapshot/backup")
-                        self.__print_msg_return_status()
+                        self.__print_err_return_status()
                         return self.__get_return_value_message()[0]
                     except:
                         self.log_err(err="Unknown error while creating nextcloud volume snapshot/backup: unable to create the nextcloud volume snapshot/backup")
-                        self.__print_msg_return_status()
+                        self.__print_err_return_status()
                         return self.__get_return_value_message()[0]
 
                     self.log_info("DONE. Prepare MariaDB to be backupped...")
@@ -173,15 +173,15 @@ class KubeNCBackup(Loggable):
                         self.__process_status[self.process_step] = 1
                     except MariaDBAppHandlerException:
                         self.log_err(err="Unable to create the MariaDB mysqldump file or 'backup' volume snapshot/backup")
-                        self.__print_msg_return_status()
+                        self.__print_err_return_status()
                         return self.__get_return_value_message()[0]
                     except conf_ext.ConfigExtractorException:
                         self.log_err(err="Error extracting config values from the main BackupConfig object.")
-                        self.__print_msg_return_status()
+                        self.__print_err_return_status()
                         return self.__get_return_value_message()[0]
                     except:
                         self.log_err(err="Unknown error while creating MariaDB mysqldump file or 'backup' volume snapshot/backup: unable to create the MariaDB backup volume snapshot/backup")
-                        self.__print_msg_return_status()
+                        self.__print_err_return_status()
                         return self.__get_return_value_message()[0]
                     finally:
                         self.__process_step += 1
@@ -201,36 +201,41 @@ class KubeNCBackup(Loggable):
                             self.__process_status[self.process_step] = 1
                         except:
                             self.log_err(err="Unable to delete old snapshots and backups")
-                            self.__print_msg_return_status()
+                            self.__print_err_return_status()
                             return self.__get_return_value_message()[0]
                 # The resources above will be released and the correspondent connections closed through the 'with' statement
             # The resources above will be released and the correspondent connections closed through the 'with' statement
             self.log_info("DONE. Cleaning up the allocated resources...")
         except K8sApiInstanceHandlerException:
             self.log_err("Cannot initialize Kubernetes API handler.")
-            self.__print_msg_return_status()
+            self.__print_err_return_status()
             return self.__get_return_value_message()[0]
         except LonghornApiInstanceConfigException:
             self.log_err("Cannot initialize Longhorn API handler.")
-            self.__print_msg_return_status()
+            self.__print_err_return_status()
             return self.__get_return_value_message()[0]
         except MariaDBApiInstanceHandlerException:
             self.log_err("Cannot initialize MariaDB API handler.")
-            self.__print_msg_return_status()
+            self.__print_err_return_status()
             return self.__get_return_value_message()[0]
         except NextcloudAppHandlerException:
             self.log_err("Cannot initialize Nextcloud app handler.")
-            self.__print_msg_return_status()
+            self.__print_err_return_status()
             return self.__get_return_value_message()[0]
         except conf_ext.ConfigExtractorException:
             self.log_err(err="Error extracting config values from the main BackupConfig object.")
-            self.__print_msg_return_status()
+            self.__print_err_return_status()
             return self.__get_return_value_message()[0]
         except:
             self.log_err("Unknown error: cannot complete the operations. Note: The operations already done will not be undone. Take care of it on your own.")
-            self.__print_msg_return_status()
+            self.__print_err_return_status()
             return self.__get_return_value_message()[0]
 
         # Process completed
-        self.__print_msg_return_status()
+        if self.__process_status == [1,1,1,1,1]:
+            # Succesfully completed
+            self.log_info(self.__get_return_value_message()[1])
+        else:
+            # Completed with errors (in this case the MariaDB actual volume snapshot/backup failed)
+            self.__print_err_return_status()
         return self.__get_return_value_message()[0]
