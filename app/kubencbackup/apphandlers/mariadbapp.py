@@ -111,12 +111,13 @@ class MariaDBAppHandler(Loggable):
         except:
             self.log_err(err="Unknown error: unable to initialize MariaDB App Handler")
             raise MariaDBAppHandlerException(message="Unknown error: unable to initialize MariaDB App Handler")
+        self.log_info("DONE. MariaDB App Handler successfully initialized")
 
     def __enter__(self):
         try:
             self.log_info(msg="Entering MariaDB backup mode...")
             self.enter_backup_mode()
-            self.log_info(msg="DONE. successfully entered MariaDB bakcup mode")
+            self.log_info(msg="DONE. Successfully entered MariaDB bakcup mode")
         except MariaDBAppHandlerException:
             self.log_err(err="Unable to enter MariaDB backup mode")
             self.clean_resources()
@@ -139,7 +140,7 @@ class MariaDBAppHandler(Loggable):
             try:
                 self.log_info(msg="Exiting MariaDB backup mode...")
                 self.exit_backup_mode()
-                self.log_info(msg="successfully exited MariaDB backup mode")
+                self.log_info(msg="Successfully exited MariaDB backup mode")
             except:
                 self.log_err(err="Unable to exit MariaDB backup mode. Check that the DB works well after the end of this process")
 
@@ -223,37 +224,37 @@ class MariaDBAppHandler(Loggable):
         self.log_info("DONE. mysqldump backup file successfully created")
 
     def enter_backup_mode(self):
-        self.log_info(msg="Enabling MariaDB backup mode...")
+        self.log_info(msg="  Enabling MariaDB backup mode...")
         try:
             if self.backup_mode == False:
                 self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_START_CMD)
                 self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_BLOCK_COMMIT_CMD)
                 self.__backup_mode=True
             else:
-                self.log_info("MariaDB backup mode already enabled")
+                self.log_info("  MariaDB backup mode already enabled")
         except MariaDBApiInstanceHandlerException:
             self.log_err(err="Unable to enable MariaDB backup mode")
             raise MariaDBAppHandlerException(message="Unable to enter MariaDB backup mode")
         except:
             self.log_err(err="Unable to create mysqldump backup file")
             raise MariaDBAppHandlerException(message="Unable to create mysqldump file")
-        self.log_info(msg="DONE. successfully enabled MariaDB backup mode")
+        self.log_info(msg="  DONE. Successfully enabled MariaDB backup mode")
 
     def exit_backup_mode(self):
-        self.log_info(msg="Disabling MariaDB backup mode...")
+        self.log_info(msg="  Disabling MariaDB backup mode...")
         try:
             if self.backup_mode == True:
                 self.mariadb_api.exec_sql_command(MariaDBAppHandler.__BACKUP_STAGE_END_CMD)
                 self.__backup_mode=False
             else:
-                self.log_info("MariaDB backup mode already disabled")
+                self.log_info("  MariaDB backup mode already disabled")
         except MariaDBApiInstanceHandlerException:
             self.log_err(err="Unable to disable backup mode. Check that the DB works well after the end of this process")
             raise MariaDBAppHandlerException(message="Unable to disable backup mode. Check that the DB works well after the end of this process")
         except:
             self.log_err(err="Unknown error: unable to create mysqldump backup file")
             raise MariaDBAppHandlerException(message="Unknown error: unable to create mysqldump backup file")
-        self.log_info(msg="DONE. successfully disabled MariaDB backup mode")
+        self.log_info(msg="  DONE. Successfully disabled MariaDB backup mode")
 
     def create_actual_volume_snapshot(self, snapshot_name):
         self.log_info(msg="Creating the MariaDB volume snapshot with name " + snapshot_name + "...")

@@ -66,12 +66,13 @@ class NextcloudAppHandler(Loggable):
         except:
             self.log_err(err="Unable to initialize Nextcloud App Handler")
             raise NextcloudAppHandlerException(message="Unable to initialize Nextcloud App Handler")
+        self.log_info("DONE. Nextcloud App Handler successfully initialized")
 
     def __enter__(self):
         try:
             self.log_info(msg="Entering Nextcloud maintenance mode...")
             self.enter_maintenance_mode()
-            self.log_info(msg="DONE. successfully entered Nextcloud maintenance mode")
+            self.log_info(msg="DONE. Successfully entered Nextcloud maintenance mode")
         except:
             self.log_err(err="Unable to enter Nextcloud maintenance mode")
             self.clean_resources()
@@ -141,24 +142,24 @@ class NextcloudAppHandler(Loggable):
 
     ### Methods implementation ###
     def enter_maintenance_mode(self):
-        self.log_info(msg="Enabling Netcloud maintenance mode...")
+        self.log_info(msg="  Enabling Netcloud maintenance mode...")
         try:
             resp = self.k8s_api.exec_container_command(pod_label="app="+self.config.app_name, command=NextcloudAppHandler.__ENTER_MAINTENANCE_CMD)
         except:
             self.log_err(err="Unable to enable Nextcloud maintenance mode")
             raise NextcloudAppHandlerException(message="Unable to enter maintenance mode")
         
-        if resp == "Maintenance mode enabled\n":
+        if resp == "Maintenance mode enabled\n" or resp == "Maintenance mode already enabled\n":
             sleep(30)
         else:
             self.log_err(err="Unable to enable Nextcloud maintenance mode")
             raise NextcloudAppHandlerException(message="Unable to enter maintenance mode")
 
         self.__is_maintenance_mode_enabled = True
-        self.log_info(msg="DONE. Nextcloud maintenance mode successfully enabled")
+        self.log_info(msg="  DONE. Nextcloud maintenance mode successfully enabled")
 
     def exit_maintenance_mode(self):
-        self.log_info(msg="Disabling Netcloud maintenance mode...")
+        self.log_info(msg="  Disabling Netcloud maintenance mode...")
         try:
             resp = self.k8s_api.exec_container_command(pod_label="app="+self.config.app_name, command=NextcloudAppHandler.__EXIT_MAINTENANCE_CMD)
         except:
@@ -170,7 +171,7 @@ class NextcloudAppHandler(Loggable):
             raise NextcloudAppHandlerException(message="Unable to exit maintenance mode. You have to do it by hands")
 
         self.__is_maintenance_mode_enabled = False
-        self.log_info(msg="DONE. Nextcloud maintenance mode successfully disabled")
+        self.log_info(msg="  DONE. Nextcloud maintenance mode successfully disabled")
 
     def create_volume_snapshot(self, snapshot_name):
         self.log_info(msg="Creating the nextcloud volume snapshot with name " + snapshot_name + "...")

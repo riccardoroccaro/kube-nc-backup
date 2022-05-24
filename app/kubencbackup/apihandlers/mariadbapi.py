@@ -63,7 +63,7 @@ def exec_only_if_conn_init(method):
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
         if self.is_connection_initialized:
-            method(self, *args, **kwargs)
+            return method(self, *args, **kwargs)
         else:
             self.log_err("Connection to MariaDB API not initialized")
             raise MariaDBApiInstanceConfigException(message="Connection to MariaDB API not initialized")
@@ -89,14 +89,14 @@ class MariaDBApiInstanceHandler (Loggable):
     def __enter__(self):
         self.log_info(msg="Initializing MariaDB API...")
         try:
-            self.log_info(msg="Initializing the connection...")
+            self.log_info(msg="  Initializing the connection...")
             self.conn = mariadb.connect(
                 host=self.__config.db_url,
                 port=self.__config.db_port,
                 user="root",
                 password=self.__config.db_root_password,
                 autocommit=True)
-            self.log_info(msg="DONE. Connection to MariaDB successfully initialized.")
+            self.log_info(msg="  DONE. Connection to MariaDB successfully initialized.")
         except mariadb.Error:
             self.log_err(err="MariaDB API error connecting to the database. Unable to connect to MariaDB")
             raise MariaDBApiInstanceHandlerException(message="MariaDB API error connecting to the database. Unable to connect to MariaDB")
@@ -105,9 +105,9 @@ class MariaDBApiInstanceHandler (Loggable):
             raise MariaDBApiInstanceHandlerException(message="Unknown error while connecting to the database. Unable to connect to MariaDB")
         
         try:
-            self.log_info(msg="Retrieving the cursor from connection...")
+            self.log_info(msg="  Retrieving the cursor from connection...")
             self.cur = self.conn.cursor()
-            self.log_info(msg="DONE. Cursor successfully retrieved.")
+            self.log_info(msg="  DONE. Cursor successfully retrieved.")
         except mariadb.Error:
             self.log_err(err="MariaDB API error: unable to retrieve the cursor")
             self.clean_conn()
@@ -133,7 +133,7 @@ class MariaDBApiInstanceHandler (Loggable):
     def clean_resources(self):
         try:
             self.clean_cur()
-            self.log_info(msg="MariaDB cursor successfully closed")
+            self.log_info(msg="  MariaDB cursor successfully closed")
             self.__is_connection_initialized = False
         except (AttributeError,NameError):
             pass
@@ -142,7 +142,7 @@ class MariaDBApiInstanceHandler (Loggable):
 
         try:
             self.clean_conn()
-            self.log_info(msg="MariaDB connection successfully closed")
+            self.log_info(msg="  MariaDB connection successfully closed")
             self.log_info(msg="MariaDB API resources successfully cleaned up")
         except (AttributeError,NameError):
             pass

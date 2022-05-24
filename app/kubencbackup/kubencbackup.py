@@ -83,7 +83,7 @@ class KubeNCBackup(Loggable):
         # Init kubernetes, longhorn and mariadb api handlers with their correspondent connections
         try:
             self.log_info("Preparing the system for the snapshots/backups...")
-            self.log_info("Initializing Kubernetes, MariaDB and Longhorn APIs...")
+            self.log_info("  Initializing Kubernetes, MariaDB and Longhorn APIs...")
             with \
                 K8sApiInstanceHandler(conf_ext.backupconfig_to_k8s_api_instance_config(backup_config)) as k8s_api, \
                 MariaDBApiInstanceHandler(conf_ext.backupconfig_to_mariadb_api_instance_config(backup_config)) as mariadb_api, \
@@ -157,7 +157,8 @@ class KubeNCBackup(Loggable):
                                     config=conf_ext.backupconfig_to_mariadb_app_config(backup_config),
                                     k8s_api=k8s_api,
                                     mariadb_api=mariadb_api,
-                                    longhorn_api=longhorn_api).create_mariadb_mysqldump()
+                                    longhorn_api=longhorn_api)
+                        db_hand.create_mariadb_mysqldump()
 
                         # Create mariadb backup volume snapshot
                         self.log_info("DONE. Creating the MariaDB backup snapshot...")
@@ -205,7 +206,7 @@ class KubeNCBackup(Loggable):
                             return self.__get_return_value_message()[0]
                 # The resources above will be released and the correspondent connections closed through the 'with' statement
             # The resources above will be released and the correspondent connections closed through the 'with' statement
-            self.log_info("DONE. Cleaning up the allocated resources...")
+            self.log_info("DONE. Cleaning up the remaining allocated resources, if any...")
         except K8sApiInstanceHandlerException:
             self.log_err("Cannot initialize Kubernetes API handler.")
             self.__print_err_return_status()

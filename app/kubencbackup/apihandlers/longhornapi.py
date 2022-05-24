@@ -78,7 +78,7 @@ def exec_only_if_conn_init(method):
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
         if self.is_connection_initialized:
-            method(self, *args, **kwargs)
+            return method(self, *args, **kwargs)
         else:
             self.log_err("Connection to Longhorn API not initialized")
             raise LonghornApiInstanceHandlerException(message="Connection to Longhorn API not initialized")
@@ -174,19 +174,19 @@ class LonghornApiInstanceHandler(Loggable):
     ### END ###
 
     ### Methods implementation ###
-    @is_connection_initialized
+    @exec_only_if_conn_init
     def create_volume_snapshot(self, snapshot_name, pv_name):
         self.log_info(msg="Creating the "+ pv_name + " volume snapshot...")
         try:
             # Retrieve the volume to snapshot
-            self.log_info(msg="Retrieving the volume to snapshot...")
+            self.log_info(msg="  Retrieving the volume to snapshot...")
             volume = self.client.by_id_volume(id=pv_name)
             if volume == None:
                 self.log_err(err="Cannot find volume named " + pv_name)
                 raise LonghornApiInstanceHandlerException(message="Cannot find volume "+ pv_name)
 
             # Create the snapshot
-            self.log_info(msg="DONE. Creating the snapshot...")
+            self.log_info(msg="  DONE. Creating the snapshot...")
             volume.snapshotCreate(name=snapshot_name)
             self.log_info(msg="DONE. Snapshot named " + snapshot_name + " for " + pv_name + " volume successfully created")
 
@@ -199,29 +199,29 @@ class LonghornApiInstanceHandler(Loggable):
             self.log_err(err="Unknown error. Unable to create the snapshot for the volume " + pv_name)
             raise LonghornApiInstanceHandlerException(message="Unknown error. Unable to create the snapshot for the volume " + pv_name)
 
-    @is_connection_initialized
+    @exec_only_if_conn_init
     def create_volume_backup(self, snapshot_name, pv_name):
         self.log_info(msg="Creating the "+ pv_name + " volume backup from snapshot " + snapshot_name + "...")
         try:
             # Retrieve the volume to backup
-            self.log_info(msg="Retrieving the volume to backup...")
+            self.log_info(msg="  Retrieving the volume to backup...")
             volume = self.client.by_id_volume(id=pv_name)
             if volume == None:
                 self.log_err(err="Cannot find volume named " + pv_name)
                 raise LonghornApiInstanceHandlerException(message="Cannot find volume "+ pv_name)
 
             # Check the snapshot existence
-            self.log_info(msg="Checking the snapshot " + snapshot_name + " existence...")
+            self.log_info(msg="  DONE. Checking the snapshot " + snapshot_name + " existence...")
             for snap in volume.snapshotList().data:
                 if snap.name == snapshot_name:
-                    self.log_info(msg="DONE. Snapshot " + snapshot_name + " successfully found")
+                    self.log_info(msg="  DONE. Snapshot " + snapshot_name + " successfully found")
                     break
             else:
                 self.log_err(err="Unable to find the snapshot named " + snapshot_name +". The backup cannot be done")
                 raise LonghornApiInstanceHandlerException(message="Unable to find the snapshot named " + snapshot_name +". The backup cannot be done")
 
             # Create the backup
-            self.log_info(msg="Creating the backup...")
+            self.log_info(msg="  Creating the backup...")
             volume.snapshotBackup(name=snapshot_name)
             self.log_info(msg="DONE. Backup from snapshot " + snapshot_name + " for " + pv_name + " volume successfully created")
         except LonghornApiInstanceHandlerException as e:
@@ -240,26 +240,33 @@ class LonghornApiInstanceHandler(Loggable):
         # Create the backup
         self.create_volume_backup(snapshot_name=backup_name, pv_name=pv_name)
 
-    @is_connection_initialized
+    @exec_only_if_conn_init
     def delete_snapshots_over_retain_count(self, pv_name):
-        self.log_info("Deleting the snapshots older than the last " + str(self.config.nr_snapshots_to_retain) + "...")
+        self.log_info("Deleting the snapshots older than the last " + str(self.config.nr_snapshots_to_retain) + "' for the volume " + pv_name + "...")
         try:
             #Retrieve volume by name
-            self.log_info(msg="Retrieving the volume " + pv_name + "...")
+            self.log_info(msg="  Retrieving the volume " + pv_name + "...")
             vol = self.client.by_id_volume(id=pv_name)
             if vol == None:
                 self.log_err(err="Cannot find volume named " + pv_name)
                 raise LonghornApiInstanceHandlerException(message="Cannot find volume "+ pv_name)
 
             #Retrieve snapshots list
-            self.log_info(msg="DONE. Retrieving the snapshots list for the volume " + pv_name)
+            self.log_info(msg="  DONE. Retrieving the snapshots list for the volume " + pv_name)
             try:
                 snaps=vol.snapshotList().data
+
+                # Removing the already deleted snapshots
+                clean_snaps = []
+                for s in snaps:
+                    if not s.removed:
+                        clean_snaps.append(s)
+                snaps = clean_snaps
             except:
                 self.log_err(err="Cannot find the snapshot list for the volume " + pv_name + ". Unable to continue")
                 raise LonghornApiInstanceHandlerException(message="Cannot find the snapshot list for the volume " + pv_name + ". Unable to continue")
 
-            self.log_info(msg="DONE. Retrieving the snapshots to remove...")
+            self.log_info(msg="  DONE. Retrieving the snapshots to remove...")
             if len(snaps) > self.config.nr_snapshots_to_retain:
                 # Polulate a dictionary with the snapshot creation time as a key
                 try:
@@ -277,11 +284,13 @@ class LonghornApiInstanceHandler(Loggable):
                 keys=[*snaps_dict]
                 keys.sort()
 
-                self.log_info(msg="DONE. Removing old snapshots for the volume " + pv_name + "...")
+                self.log_info(msg="  DONE. Removing old snapshots for the volume " + pv_name + "...")
                 # Remove the older snapshots
                 while len(keys) > self.config.nr_snapshots_to_retain:
-                    vol.snapshotDelete(name=snaps_dict[keys.pop(0)])
-                self.log_info(msg="DONE. successfully removed the older snapshots for the volume " + pv_name)
+                    to_del = snaps_dict[keys.pop(0)]
+                    self.log_info("    Deleting the snapshot named: " + to_del)
+                    vol.snapshotDelete(name=to_del)
+                self.log_info(msg="DONE. Successfully removed the older snapshots for the volume " + pv_name)
         except LonghornApiInstanceHandlerException as e:
             raise e
         except (ApiError,ClientApiError):
@@ -291,26 +300,26 @@ class LonghornApiInstanceHandler(Loggable):
             self.log_err(err="Unknown error. Cannot delete snapshots over retain count")
             raise LonghornApiInstanceHandlerException(message="Unknown error. Cannot delete snapshots over retain count")
 
-    @is_connection_initialized
+    @exec_only_if_conn_init
     def delete_backups_over_retain_count(self, pv_name):
-        self.log_info("Deleting the backups older than the last " + str(self.config.nr_backups_to_retain) + "...")
+        self.log_info("Deleting the backups older than the last '" + str(self.config.nr_backups_to_retain) + "' for the volume " + pv_name + "...")
         try:
             #Retrieve volume by name
-            self.log_info(msg="Retrieving the volume " + pv_name + "...")
+            self.log_info(msg="  Retrieving the volume " + pv_name + "...")
             vol = self.client.by_id_backupVolume(id=pv_name)
             if vol == None:
                 self.log_err(err="Cannot find volume named " + pv_name)
                 raise LonghornApiInstanceHandlerException(message="Cannot find volume "+ pv_name)
             
             #Retrieve backups list
-            self.log_info(msg="DONE. Retrieving the backups list for the volume " + pv_name)
+            self.log_info(msg="  DONE. Retrieving the backups list for the volume " + pv_name)
             try:
                 backs=vol.backupList().data
             except:
                 self.log_err(err="Cannot find the backups list for the volume " + pv_name + ". Unable to continue")
                 raise LonghornApiInstanceHandlerException(message="Cannot find the backups list")
 
-            self.log_info(msg="DONE. Retrieving the backups to remove...")
+            self.log_info(msg="  DONE. Retrieving the backups to remove...")
             if len(backs) > self.config.nr_backups_to_retain:
                 # Polulate a dictionary with the snapshot (linked to the backup) creation time as a key
                 try:
@@ -330,11 +339,13 @@ class LonghornApiInstanceHandler(Loggable):
                 keys=[*backs_dict]
                 keys.sort()
 
-                self.log_info(msg="DONE. Removing old backups for the volume " + pv_name + "...")
+                self.log_info(msg="  DONE. Removing old backups for the volume " + pv_name + "...")
                 # Remove the older backups
                 while len(keys) > self.config.nr_backups_to_retain:
-                    vol.backupDelete(name=backs_dict[keys.pop(0)])
-                self.log_info(msg="DONE. successfully removed the older backups for the volume " + pv_name)
+                    to_del = backs_dict[keys.pop(0)]
+                    self.log_info("    Deleting the backup named: " + to_del)
+                    vol.backupDelete(name=to_del)
+                self.log_info(msg="DONE. Successfully removed the older backups for the volume " + pv_name)
         except LonghornApiInstanceHandlerException as e:
             raise e
         except (ApiError,ClientApiError):
