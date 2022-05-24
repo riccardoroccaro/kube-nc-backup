@@ -72,153 +72,183 @@ class KubeNCBackup(Loggable):
                 MariaDBApiInstanceHandler(conf_ext.backupconfig_to_mariadb_api_instance_config(backup_config)) as mariadb_api, \
                 LonghornApiInstanceHandler(conf_ext.backupconfig_to_longhorn_api_instance_config(backup_config)) as longhorn_api:
 
-                # Create nextcloud app handler and automatically enter maintenance mode
-                self.log_info("DONE. Prepare Nextcloud to be backupped...")
-                with NextcloudAppHandler(config=conf_ext.backupconfig_to_nextcloud_app_config(backup_config),k8s_api=k8s_api,longhorn_api=longhorn_api) as ncah:
-                    # Succesfully initialized the APIs and Nextcloud APP => next step
-                    self.__process_status[self.process_step] = 1
-                    self.__process_step += 1
-
-                    # Create nextcloud snapshot and backup (if required)
-                    try:
-                        # Set snapshots and backups name
-                        snapshot_backup_name=datetime.now().strftime("%d-%m-%Y__%H-%M-%S")
-
-                        # Create nextcloud snapshot
-                        self.log_info("DONE. Creating the Nextcloud snapshot...")
-                        ncah.create_volume_snapshot(snapshot_name=snapshot_backup_name)
-
-                        # Check whether a simple snapshot or a backup too have to be done
-                        if backup_config.backup_type == "FULL-BACKUP":
-                            # Create nextcloud backup
-                            self.log_info("DONE. Creating the Nextcloud backup...")
-                            ncah.create_volume_backup(snapshot_name=snapshot_backup_name)
-
-                        # Succesfully created the Nextcloud snapshot/backup => reducing self.__return_code
+                try:
+                    # Create nextcloud app handler and automatically enter maintenance mode
+                    self.log_info("DONE. Prepare Nextcloud to be backupped...")
+                    with NextcloudAppHandler(config=conf_ext.backupconfig_to_nextcloud_app_config(backup_config),k8s_api=k8s_api,longhorn_api=longhorn_api) as ncah:
+                        # Succesfully initialized the APIs and Nextcloud APP => next step
                         self.__process_status[self.process_step] = 1
                         self.__process_step += 1
-                    except NextcloudAppHandlerException:
-                        self.log_err(err="Unable to create the nextcloud volume snapshot/backup")
-                        if self.debug_mode_enabled:
-                            self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                            self.__tracebacks_list.append(sys.exc_info())
-                        return
-                    except:
-                        self.log_err(err="Unknown error while creating nextcloud volume snapshot/backup: unable to create the nextcloud volume snapshot/backup")
-                        if self.debug_mode_enabled:
-                            self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                            self.__tracebacks_list.append(sys.exc_info())
-                        return
 
-                    self.log_info("DONE. Prepare MariaDB to be backupped...")
-                    # Create mariadb app handler and automatically enter backup mode
-                    try:
-                        with MariaDBAppHandler(config=conf_ext.backupconfig_to_mariadb_app_config(backup_config),k8s_api=k8s_api,mariadb_api=mariadb_api,longhorn_api=longhorn_api) as mdbah:
-                            # Create mariadb actual volume snapshot
-                            self.log_info("DONE. Creating the MariaDB actual volume snapshot...")
-                            mdbah.create_actual_volume_snapshot(snapshot_name=snapshot_backup_name)
+                        # Create nextcloud snapshot and backup (if required)
+                        try:
+                            # Set snapshots and backups name
+                            snapshot_backup_name=datetime.now().strftime("%d-%m-%Y__%H-%M-%S")
+
+                            # Create nextcloud snapshot
+                            self.log_info("DONE. Creating the Nextcloud snapshot...")
+                            ncah.create_volume_snapshot(snapshot_name=snapshot_backup_name)
 
                             # Check whether a simple snapshot or a backup too have to be done
                             if backup_config.backup_type == "FULL-BACKUP":
-                                # Create mariadb actual volume backup
-                                self.log_info("DONE. Creating the MariaDB actual volume backup...")
-                                mdbah.create_actual_volume_backup(snapshot_name=snapshot_backup_name)
+                                # Create nextcloud backup
+                                self.log_info("DONE. Creating the Nextcloud backup...")
+                                ncah.create_volume_backup(snapshot_name=snapshot_backup_name)
 
-                            # Succesfully created the MariaDB actual volume snapshot/backup => reducing self.__return_code
+                            # Succesfully created the Nextcloud snapshot/backup => reducing self.__return_code
                             self.__process_status[self.process_step] = 1
-                    except MariaDBAppHandlerException:
-                        if self.debug_mode_enabled:
-                            self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                            self.__tracebacks_list.append(sys.exc_info())
-                        self.log_err(err="Unable to create the MariaDB actual volume snapshot/backup")
-                    except conf_ext.ConfigExtractorException:
-                        if self.debug_mode_enabled:
-                            self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                            self.__tracebacks_list.append(sys.exc_info())
-                        self.log_err(err="Error extracting config values from the main BackupConfig object.")
-                    except:
-                        if self.debug_mode_enabled:
-                            self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                            self.__tracebacks_list.append(sys.exc_info())
-                        self.log_err(err="Unknown error while creating MariaDB actual volume snapshot/backup: unable to create the MariaDB actual volume snapshot/backup")
-                    finally:
-                        self.__process_step += 1
-                    # The resources above will be released and the correspondent connections closed through the 'with' statement
-
-                    # Create mysqldump file
-                    self.log_info("DONE. Create the db backup in SQL format...")
-                    try:
-                        # Create the mysqldump
-                        db_hand = MariaDBAppHandler(
-                                    config=conf_ext.backupconfig_to_mariadb_app_config(backup_config),
-                                    k8s_api=k8s_api,
-                                    mariadb_api=mariadb_api,
-                                    longhorn_api=longhorn_api)
-                        db_hand.create_mariadb_mysqldump()
-
-                        # Create mariadb backup volume snapshot
-                        self.log_info("DONE. Creating the MariaDB backup snapshot...")
-                        db_hand.create_backup_volume_snapshot(snapshot_name=snapshot_backup_name)
-
-                        # Check whether a simple snapshot or a backup too have to be done
-                        if backup_config.backup_type == "FULL-BACKUP":
-                            # Create mariadb backup volume backup
-                            self.log_info("DONE. Creating the MariaDB backup volume backup...")
-                            db_hand.create_backup_volume_backup(snapshot_name=snapshot_backup_name)
-
-                        # Succesfully created the MariaDB backup volume snapshot/backup => reducing self.__return_code
-                        self.__process_status[self.process_step] = 1
-                    except MariaDBAppHandlerException:
-                        if self.debug_mode_enabled:
-                            self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                            self.__tracebacks_list.append(sys.exc_info())
-                        self.log_err(err="Unable to create the MariaDB mysqldump file or 'backup' volume snapshot/backup")
-                    except conf_ext.ConfigExtractorException:
-                        if self.debug_mode_enabled:
-                            self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                            self.__tracebacks_list.append(sys.exc_info())
-                        self.log_err(err="Error extracting config values from the main BackupConfig object.")
-                    except:
-                        if self.debug_mode_enabled:
-                            self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                            self.__tracebacks_list.append(sys.exc_info())
-                        self.log_err(err="Unknown error while creating MariaDB mysqldump file or 'backup' volume snapshot/backup: unable to create the MariaDB backup volume snapshot/backup")
-                    finally:
-                        self.__process_step += 1
-
-                    # Remove old snapshots and backups only if everithing before has gone right
-                    if self.__process_status == [1,1,1,1,0]:
-                        try:
-                            # Cleanup nextcloud old snapshots and backups
-                            self.log_info("DONE. Cleaning up Nextcloud old snapshots and backups...")
-                            ncah.delete_backups_and_snapshots_over_retain_count()
-
-                            # Cleanup mariadb old snapshots and backups
-                            self.log_info("DONE. Cleaning up MariaDB old snapshots and backups...")
-                            db_hand.delete_backups_and_snapshots_over_retain_count()
-
-                            # Succesfully cleaned up the old snapshot/backup => reducing self.__return_code
-                            self.__process_status[self.process_step] = 1
+                            self.__process_step += 1
                         except NextcloudAppHandlerException:
-                            self.log_err(err="Error when deleting nextcloud backups and snapshots: unable to delete old snapshots and backups")
-                            if self.debug_mode_enabled:
-                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                self.__tracebacks_list.append(sys.exc_info())
-                            return
-                        except MariaDBAppHandlerException:
-                            self.log_err(err="Error when deleting mariasb backups and snapshots: unable to delete old snapshots and backups")
+                            self.log_err(err="Unable to create the nextcloud volume snapshot/backup")
                             if self.debug_mode_enabled:
                                 self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
                                 self.__tracebacks_list.append(sys.exc_info())
                             return
                         except:
-                            self.log_err(err="Unknown error: unable to delete old snapshots and backups")
+                            self.log_err(err="Unknown error while creating nextcloud volume snapshot/backup: unable to create the nextcloud volume snapshot/backup")
                             if self.debug_mode_enabled:
                                 self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
                                 self.__tracebacks_list.append(sys.exc_info())
                             return
+
+                        self.log_info("DONE. Prepare MariaDB to be backupped...")
+                        # Create mariadb app handler and automatically enter backup mode
+                        try:
+                            with MariaDBAppHandler(config=conf_ext.backupconfig_to_mariadb_app_config(backup_config),k8s_api=k8s_api,mariadb_api=mariadb_api,longhorn_api=longhorn_api) as mdbah:
+                                try:
+                                    # Create mariadb actual volume snapshot
+                                    self.log_info("DONE. Creating the MariaDB actual volume snapshot...")
+                                    mdbah.create_actual_volume_snapshot(snapshot_name=snapshot_backup_name)
+
+                                    # Check whether a simple snapshot or a backup too have to be done
+                                    if backup_config.backup_type == "FULL-BACKUP":
+                                        # Create mariadb actual volume backup
+                                        self.log_info("DONE. Creating the MariaDB actual volume backup...")
+                                        mdbah.create_actual_volume_backup(snapshot_name=snapshot_backup_name)
+
+                                    # Succesfully created the MariaDB actual volume snapshot/backup => reducing self.__return_code
+                                    self.__process_status[self.process_step] = 1
+                                except MariaDBAppHandlerException:
+                                    if self.debug_mode_enabled:
+                                        self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                        self.__tracebacks_list.append(sys.exc_info())
+                                    self.log_err(err="Unable to create the MariaDB actual volume snapshot/backup")
+                                except:
+                                    if self.debug_mode_enabled:
+                                        self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                        self.__tracebacks_list.append(sys.exc_info())
+                                    self.log_err(err="Unknown error while creating MariaDB actual volume snapshot/backup: unable to create the MariaDB actual volume snapshot/backup")
+                        except MariaDBAppHandlerException:
+                            if self.debug_mode_enabled:
+                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                self.__tracebacks_list.append(sys.exc_info())
+                            self.log_err(err="Unable to initialize the MariaDB app")
+                        except conf_ext.ConfigExtractorException:
+                            if self.debug_mode_enabled:
+                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                self.__tracebacks_list.append(sys.exc_info())
+                            self.log_err(err="Error extracting config values from the main BackupConfig object.")
+                        except:
+                            if self.debug_mode_enabled:
+                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                self.__tracebacks_list.append(sys.exc_info())
+                            self.log_err(err="Unknown error while initializing MariaDB app handler: unable to create the MariaDB actual volume snapshot/backup")
+                        finally:
+                            self.__process_step += 1
+                        # The resources above will be released and the correspondent connections closed through the 'with' statement
+
+                        # Create mysqldump file
+                        self.log_info("DONE. Create the db backup in SQL format...")
+                        try:
+                            # Create the mysqldump
+                            db_hand = MariaDBAppHandler(
+                                        config=conf_ext.backupconfig_to_mariadb_app_config(backup_config),
+                                        k8s_api=k8s_api,
+                                        mariadb_api=mariadb_api,
+                                        longhorn_api=longhorn_api)
+                            db_hand.create_mariadb_mysqldump()
+
+                            # Create mariadb backup volume snapshot
+                            self.log_info("DONE. Creating the MariaDB backup snapshot...")
+                            db_hand.create_backup_volume_snapshot(snapshot_name=snapshot_backup_name)
+
+                            # Check whether a simple snapshot or a backup too have to be done
+                            if backup_config.backup_type == "FULL-BACKUP":
+                                # Create mariadb backup volume backup
+                                self.log_info("DONE. Creating the MariaDB backup volume backup...")
+                                db_hand.create_backup_volume_backup(snapshot_name=snapshot_backup_name)
+
+                            # Succesfully created the MariaDB backup volume snapshot/backup => reducing self.__return_code
+                            self.__process_status[self.process_step] = 1
+                        except MariaDBAppHandlerException:
+                            if self.debug_mode_enabled:
+                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                self.__tracebacks_list.append(sys.exc_info())
+                            self.log_err(err="Unable to create the MariaDB mysqldump file or 'backup' volume snapshot/backup")
+                        except conf_ext.ConfigExtractorException:
+                            if self.debug_mode_enabled:
+                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                self.__tracebacks_list.append(sys.exc_info())
+                            self.log_err(err="Error extracting config values from the main BackupConfig object.")
+                        except:
+                            if self.debug_mode_enabled:
+                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                self.__tracebacks_list.append(sys.exc_info())
+                            self.log_err(err="Unknown error while creating MariaDB mysqldump file or 'backup' volume snapshot/backup: unable to create the MariaDB backup volume snapshot/backup")
+                        finally:
+                            self.__process_step += 1
+
+                        # Remove old snapshots and backups only if everithing before has gone right
+                        if self.__process_status == [1,1,1,1,0]:
+                            try:
+                                # Cleanup nextcloud old snapshots and backups
+                                self.log_info("DONE. Cleaning up Nextcloud old snapshots and backups...")
+                                ncah.delete_backups_and_snapshots_over_retain_count()
+
+                                # Cleanup mariadb old snapshots and backups
+                                self.log_info("DONE. Cleaning up MariaDB old snapshots and backups...")
+                                db_hand.delete_backups_and_snapshots_over_retain_count()
+
+                                # Succesfully cleaned up the old snapshot/backup => reducing self.__return_code
+                                self.__process_status[self.process_step] = 1
+                            except NextcloudAppHandlerException:
+                                self.log_err(err="Error when deleting nextcloud backups and snapshots: unable to delete old snapshots and backups")
+                                if self.debug_mode_enabled:
+                                    self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                    self.__tracebacks_list.append(sys.exc_info())
+                                return
+                            except MariaDBAppHandlerException:
+                                self.log_err(err="Error when deleting mariasb backups and snapshots: unable to delete old snapshots and backups")
+                                if self.debug_mode_enabled:
+                                    self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                    self.__tracebacks_list.append(sys.exc_info())
+                                return
+                            except:
+                                self.log_err(err="Unknown error: unable to delete old snapshots and backups")
+                                if self.debug_mode_enabled:
+                                    self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                                    self.__tracebacks_list.append(sys.exc_info())
+                                return
+                    # The resources above will be released and the correspondent connections closed through the 'with' statement
                 # The resources above will be released and the correspondent connections closed through the 'with' statement
-            # The resources above will be released and the correspondent connections closed through the 'with' statement
+                except NextcloudAppHandlerException:
+                    self.log_err("Cannot initialize Nextcloud app handler.")
+                    if self.debug_mode_enabled:
+                        self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                        self.__tracebacks_list.append(sys.exc_info())
+                    return
+                except conf_ext.ConfigExtractorException:
+                    self.log_err(err="Error extracting config values from the main BackupConfig object.")
+                    if self.debug_mode_enabled:
+                        self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                        self.__tracebacks_list.append(sys.exc_info())
+                    return
+                except:
+                    self.log_err("Unknown error: cannot initialize Nextcloud app handler")
+                    if self.debug_mode_enabled:
+                        self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
+                        self.__tracebacks_list.append(sys.exc_info())
+                    return
             self.log_info("DONE. Cleaning up the remaining allocated resources, if any...")
         except K8sApiInstanceHandlerException:
             self.log_err("Cannot initialize Kubernetes API handler.")
@@ -234,12 +264,6 @@ class KubeNCBackup(Loggable):
             return
         except MariaDBApiInstanceHandlerException:
             self.log_err("Cannot initialize MariaDB API handler.")
-            if self.debug_mode_enabled:
-                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                self.__tracebacks_list.append(sys.exc_info())
-            return
-        except NextcloudAppHandlerException:
-            self.log_err("Cannot initialize Nextcloud app handler.")
             if self.debug_mode_enabled:
                 self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
                 self.__tracebacks_list.append(sys.exc_info())
