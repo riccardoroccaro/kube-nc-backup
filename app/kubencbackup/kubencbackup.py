@@ -199,7 +199,6 @@ class KubeNCBackup(Loggable):
 
                         # Remove old snapshots and backups only if everithing before has gone right
                         if self.__process_status == [1,1,1,1,0]:
-                            raise Exception("Test")
                             try:
                                 raise Exception("Test")
                                 # Cleanup nextcloud old snapshots and backups
