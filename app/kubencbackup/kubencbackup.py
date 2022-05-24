@@ -58,6 +58,8 @@ class KubeNCBackup(Loggable):
         try:
             self.log_info("Retrieving the configuration from the environment variables...")
 
+            raise Exception("Test")
+
             backup_config = BackupConfig()
 
             self.log_info("DONE. Configurations successfully retrieved.")
@@ -70,21 +72,25 @@ class KubeNCBackup(Loggable):
         try:
             self.log_info("Preparing the system for the snapshots/backups...")
             self.log_info("  Initializing Kubernetes, MariaDB and Longhorn APIs...")
+            raise Exception("Test")
             with \
                 K8sApiInstanceHandler(conf_ext.backupconfig_to_k8s_api_instance_config(backup_config)) as k8s_api, \
                 MariaDBApiInstanceHandler(conf_ext.backupconfig_to_mariadb_api_instance_config(backup_config)) as mariadb_api, \
                 LonghornApiInstanceHandler(conf_ext.backupconfig_to_longhorn_api_instance_config(backup_config)) as longhorn_api:
 
+                raise Exception("Test")
                 try:
                     # Create nextcloud app handler and automatically enter maintenance mode
                     self.log_info("DONE. Prepare Nextcloud to be backupped...")
+                    raise Exception("Test")
                     with NextcloudAppHandler(config=conf_ext.backupconfig_to_nextcloud_app_config(backup_config),k8s_api=k8s_api,longhorn_api=longhorn_api) as ncah:
                         # Succesfully initialized the APIs and Nextcloud APP => next step
                         self.__process_status[self.process_step] = 1
                         self.__process_step += 1
-
+                        raise Exception("Test")
                         # Create nextcloud snapshot and backup (if required)
                         try:
+                            raise Exception("Test")
                             # Set snapshots and backups name
                             snapshot_backup_name=datetime.now().strftime("%d-%m-%Y__%H-%M-%S")
 
@@ -110,13 +116,18 @@ class KubeNCBackup(Loggable):
                             self.__new_stacktrace_block(sys.exc_info())
                             return
 
+                        raise Exception("Test")
+
                         self.log_info("DONE. Prepare MariaDB to be backupped...")
                         # Create mariadb app handler and automatically enter backup mode
                         try:
+                            raise Exception("Test")
                             with MariaDBAppHandler(config=conf_ext.backupconfig_to_mariadb_app_config(backup_config),k8s_api=k8s_api,mariadb_api=mariadb_api,longhorn_api=longhorn_api) as mdbah:
+                                raise Exception("Test")
                                 try:
                                     # Create mariadb actual volume snapshot
                                     self.log_info("DONE. Creating the MariaDB actual volume snapshot...")
+                                    raise Exception("Test")
                                     mdbah.create_actual_volume_snapshot(snapshot_name=snapshot_backup_name)
 
                                     # Check whether a simple snapshot or a backup too have to be done
@@ -149,6 +160,7 @@ class KubeNCBackup(Loggable):
                         # Create mysqldump file
                         self.log_info("DONE. Create the db backup in SQL format...")
                         try:
+                            raise Exception("Test")
                             # Create the mysqldump
                             db_hand = MariaDBAppHandler(
                                         config=conf_ext.backupconfig_to_mariadb_app_config(backup_config),
@@ -183,6 +195,7 @@ class KubeNCBackup(Loggable):
 
                         # Remove old snapshots and backups only if everithing before has gone right
                         if self.__process_status == [1,1,1,1,0]:
+                            raise Exception("Test")
                             try:
                                 # Cleanup nextcloud old snapshots and backups
                                 self.log_info("DONE. Cleaning up Nextcloud old snapshots and backups...")
