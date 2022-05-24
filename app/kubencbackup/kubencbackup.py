@@ -157,6 +157,8 @@ class KubeNCBackup(Loggable):
                             self.__process_step += 1
                         # The resources above will be released and the correspondent connections closed through the 'with' statement
 
+                        raise Exception("Test")
+
                         # Create mysqldump file
                         self.log_info("DONE. Create the db backup in SQL format...")
                         try:
@@ -193,10 +195,12 @@ class KubeNCBackup(Loggable):
                         finally:
                             self.__process_step += 1
 
+                        raise Exception("Test")
+
                         # Remove old snapshots and backups only if everithing before has gone right
                         if self.__process_status == [1,1,1,1,0]:
-                            raise Exception("Test")
                             try:
+                                raise Exception("Test")
                                 # Cleanup nextcloud old snapshots and backups
                                 self.log_info("DONE. Cleaning up Nextcloud old snapshots and backups...")
                                 ncah.delete_backups_and_snapshots_over_retain_count()
