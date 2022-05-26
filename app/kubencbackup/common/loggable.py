@@ -72,7 +72,7 @@ class Loggable:
 
     def log_info(self, msg):
         if self.log_level <= self.log_depth:
-            prefix = Loggable.__prefix(self.__indent_str + "["+self.name+"][INFO]: ")
+            prefix = Loggable.__prefix(self.__indent_str + "["+self.name+"]["+TextColor.GREEN()+"INFO"+TextColor.NO_COL()+"]: ")
             wrapper = textwrap.TextWrapper(
                 initial_indent=prefix,
                 width=self.log_msg_col_len,

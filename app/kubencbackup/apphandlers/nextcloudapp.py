@@ -150,7 +150,8 @@ class NextcloudAppHandler(Loggable):
             raise NextcloudAppHandlerException(message="Unable to enter maintenance mode")
         
         if resp == "Maintenance mode enabled\n" or resp == "Maintenance mode already enabled\n":
-            sleep(30)
+            # sleep(30)
+            pass
         else:
             self.log_err(err="Unable to enable Nextcloud maintenance mode")
             raise NextcloudAppHandlerException(message="Unable to enter maintenance mode")
