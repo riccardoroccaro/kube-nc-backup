@@ -50,6 +50,9 @@ class KubeNCBackup(Loggable):
 
     def __do_tasks(self):
         # Init BackupConfig
+        if self.debug_mode_enabled:
+            self.log_info("<===== BEGIN exceptions traceback block #" + str(len(self.__tracebacks_list)) + " =====>")
+
         try:
             self.log_info("Retrieving the configuration from the environment variables...")
 
@@ -58,9 +61,7 @@ class KubeNCBackup(Loggable):
             self.log_info("DONE. Configurations successfully retrieved.")
         except:
             self.log_err("Cannot retrieve the config environment variables.")
-            if self.debug_mode_enabled:
-                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                self.__tracebacks_list.append(sys.exc_info())
+            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
             return
 
         # Init kubernetes, longhorn and mariadb api handlers with their correspondent connections
@@ -100,15 +101,11 @@ class KubeNCBackup(Loggable):
                             self.__process_step += 1
                         except NextcloudAppHandlerException:
                             self.log_err(err="Unable to create the nextcloud volume snapshot/backup")
-                            if self.debug_mode_enabled:
-                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                self.__tracebacks_list.append(sys.exc_info())
+                            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                             return
                         except:
                             self.log_err(err="Unknown error while creating nextcloud volume snapshot/backup: unable to create the nextcloud volume snapshot/backup")
-                            if self.debug_mode_enabled:
-                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                self.__tracebacks_list.append(sys.exc_info())
+                            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                             return
 
                         self.log_info("DONE. Prepare MariaDB to be backupped...")
@@ -129,30 +126,20 @@ class KubeNCBackup(Loggable):
                                     # Succesfully created the MariaDB actual volume snapshot/backup => reducing self.__return_code
                                     self.__process_status[self.process_step] = 1
                                 except MariaDBAppHandlerException:
-                                    if self.debug_mode_enabled:
-                                        self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                        self.__tracebacks_list.append(sys.exc_info())
                                     self.log_err(err="Unable to create the MariaDB actual volume snapshot/backup")
+                                    self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                                 except:
-                                    if self.debug_mode_enabled:
-                                        self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                        self.__tracebacks_list.append(sys.exc_info())
                                     self.log_err(err="Unknown error while creating MariaDB actual volume snapshot/backup: unable to create the MariaDB actual volume snapshot/backup")
+                                    self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                         except MariaDBAppHandlerException:
-                            if self.debug_mode_enabled:
-                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                self.__tracebacks_list.append(sys.exc_info())
                             self.log_err(err="Unable to initialize the MariaDB app")
+                            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                         except conf_ext.ConfigExtractorException:
-                            if self.debug_mode_enabled:
-                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                self.__tracebacks_list.append(sys.exc_info())
                             self.log_err(err="Error extracting config values from the main BackupConfig object.")
+                            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                         except:
-                            if self.debug_mode_enabled:
-                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                self.__tracebacks_list.append(sys.exc_info())
                             self.log_err(err="Unknown error while initializing MariaDB app handler: unable to create the MariaDB actual volume snapshot/backup")
+                            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                         finally:
                             self.__process_step += 1
                         # The resources above will be released and the correspondent connections closed through the 'with' statement
@@ -181,20 +168,14 @@ class KubeNCBackup(Loggable):
                             # Succesfully created the MariaDB backup volume snapshot/backup => reducing self.__return_code
                             self.__process_status[self.process_step] = 1
                         except MariaDBAppHandlerException:
-                            if self.debug_mode_enabled:
-                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                self.__tracebacks_list.append(sys.exc_info())
                             self.log_err(err="Unable to create the MariaDB mysqldump file or 'backup' volume snapshot/backup")
+                            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                         except conf_ext.ConfigExtractorException:
-                            if self.debug_mode_enabled:
-                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                self.__tracebacks_list.append(sys.exc_info())
                             self.log_err(err="Error extracting config values from the main BackupConfig object.")
+                            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                         except:
-                            if self.debug_mode_enabled:
-                                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                self.__tracebacks_list.append(sys.exc_info())
                             self.log_err(err="Unknown error while creating MariaDB mysqldump file or 'backup' volume snapshot/backup: unable to create the MariaDB backup volume snapshot/backup")
+                            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                         finally:
                             self.__process_step += 1
 
@@ -213,72 +194,50 @@ class KubeNCBackup(Loggable):
                                 self.__process_status[self.process_step] = 1
                             except NextcloudAppHandlerException:
                                 self.log_err(err="Error when deleting nextcloud backups and snapshots: unable to delete old snapshots and backups")
-                                if self.debug_mode_enabled:
-                                    self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                    self.__tracebacks_list.append(sys.exc_info())
+                                self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                                 return
                             except MariaDBAppHandlerException:
                                 self.log_err(err="Error when deleting mariasb backups and snapshots: unable to delete old snapshots and backups")
-                                if self.debug_mode_enabled:
-                                    self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                    self.__tracebacks_list.append(sys.exc_info())
+                                self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                                 return
                             except:
                                 self.log_err(err="Unknown error: unable to delete old snapshots and backups")
-                                if self.debug_mode_enabled:
-                                    self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                                    self.__tracebacks_list.append(sys.exc_info())
+                                self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                                 return
                     # The resources above will be released and the correspondent connections closed through the 'with' statement
                 # The resources above will be released and the correspondent connections closed through the 'with' statement
                 except NextcloudAppHandlerException:
                     self.log_err("Cannot initialize Nextcloud app handler.")
-                    if self.debug_mode_enabled:
-                        self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                        self.__tracebacks_list.append(sys.exc_info())
+                    self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                     return
                 except conf_ext.ConfigExtractorException:
                     self.log_err(err="Error extracting config values from the main BackupConfig object.")
-                    if self.debug_mode_enabled:
-                        self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                        self.__tracebacks_list.append(sys.exc_info())
+                    self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                     return
                 except:
                     self.log_err("Unknown error: cannot initialize Nextcloud app handler")
-                    if self.debug_mode_enabled:
-                        self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                        self.__tracebacks_list.append(sys.exc_info())
+                    self.__new_stacktrace_block(self, ex_info=sys.exc_info())
                     return
             self.log_info("DONE. Cleaning up the remaining allocated resources, if any...")
         except K8sApiInstanceHandlerException:
             self.log_err("Cannot initialize Kubernetes API handler.")
-            if self.debug_mode_enabled:
-                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                self.__tracebacks_list.append(sys.exc_info())
+            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
             return
         except LonghornApiInstanceConfigException:
             self.log_err("Cannot initialize Longhorn API handler.")
-            if self.debug_mode_enabled:
-                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                self.__tracebacks_list.append(sys.exc_info())
+            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
             return
         except MariaDBApiInstanceHandlerException:
             self.log_err("Cannot initialize MariaDB API handler.")
-            if self.debug_mode_enabled:
-                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                self.__tracebacks_list.append(sys.exc_info())
+            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
             return
         except conf_ext.ConfigExtractorException:
             self.log_err(err="Error extracting config values from the main BackupConfig object.")
-            if self.debug_mode_enabled:
-                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                self.__tracebacks_list.append(sys.exc_info())
+            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
             return
         except:
             self.log_err("Unknown error: cannot complete the operations. Note: The operations already done will not be undone. Take care of it on your own.")
-            if self.debug_mode_enabled:
-                self.log_info("<===== Exceptions traceback #" + str(len(self.__tracebacks_list)))
-                self.__tracebacks_list.append(sys.exc_info())
+            self.__new_stacktrace_block(self, ex_info=sys.exc_info())
             return
 
         return
@@ -305,9 +264,15 @@ class KubeNCBackup(Loggable):
         if self.debug_mode_enabled:
             i = 0
             for t in self.__tracebacks_list:
-                print("\n##### Exceptions traceback #" + str(i) + " #####")
+                print("\n##### Exceptions traceback for block #" + str(i) + " #####")
                 traceback.print_exception(*t)
-                print("##### END Exception traceback #" + str(i) + " #####\n")
+                print("##### END Exception traceback for block #" + str(i) + " #####\n")
+
+    def __new_stacktrace_block(self, ex_info):
+        if self.debug_mode_enabled:
+            self.log_info("<===== END exceptions traceback block #" + str(len(self.__tracebacks_list)) + " =====>")
+            self.__tracebacks_list.append(sys.exc_info())
+            self.log_info("<===== BEGIN exceptions traceback block #" + str(len(self.__tracebacks_list)) + " =====>")
     
     def main(self):
         self.__do_tasks()

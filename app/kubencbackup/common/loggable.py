@@ -65,10 +65,9 @@ class Loggable:
             print(wrapper.fill(msg))
 
     def log_err(self, err):
-        if self.log_level <= self.log_depth:
-            prefix = Loggable.__prefix(self.__indent_str + "["+self.name+"][ERR ]: ")
-            wrapper = textwrap.TextWrapper(
-                initial_indent=prefix,
-                width=180,
-                subsequent_indent=' '*len(prefix))
-            print(wrapper.fill(err))
+        prefix = Loggable.__prefix(self.__indent_str + "["+self.name+"][ERR ]: ")
+        wrapper = textwrap.TextWrapper(
+            initial_indent=prefix,
+            width=180,
+            subsequent_indent=' '*len(prefix))
+        print(wrapper.fill(err))
