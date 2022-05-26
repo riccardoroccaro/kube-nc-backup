@@ -49,10 +49,11 @@ class KubeNCBackup(Loggable):
     ### END ###
 
     def __do_tasks(self):
-        # Init BackupConfig
+        # Debug mode on initial log
         if self.debug_mode_enabled:
             self.log_info("<===== BEGIN exceptions traceback block #" + str(len(self.__tracebacks_list)) + " =====>")
 
+        # Init BackupConfig
         try:
             self.log_info("Retrieving the configuration from the environment variables...")
 
@@ -271,7 +272,7 @@ class KubeNCBackup(Loggable):
     def __new_stacktrace_block(self, ex_info):
         if self.debug_mode_enabled:
             self.log_info("<===== END exceptions traceback block #" + str(len(self.__tracebacks_list)) + " =====>")
-            self.__tracebacks_list.append(sys.exc_info())
+            self.__tracebacks_list.append(ex_info)
             self.log_info("<===== BEGIN exceptions traceback block #" + str(len(self.__tracebacks_list)) + " =====>")
     
     def main(self):
