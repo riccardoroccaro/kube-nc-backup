@@ -1,7 +1,7 @@
 from time import sleep
 
-from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceHandler, K8sApiInstanceHandlerException
-from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceHandler, LonghornApiInstanceHandlerException
+from kubencbackup.apihandlers.kubernetesapi import K8sApiInstanceHandler
+from kubencbackup.apihandlers.longhornapi import LonghornApiInstanceHandler
 from kubencbackup.common.backupexceptions import AppConfigException, AppHandlerException
 from kubencbackup.common.loggable import Loggable
 
@@ -66,16 +66,17 @@ class NextcloudAppHandler(Loggable):
         except:
             self.log_err(err="Unable to initialize Nextcloud App Handler")
             raise NextcloudAppHandlerException(message="Unable to initialize Nextcloud App Handler")
+        self.log_info("DONE. Nextcloud App Handler successfully initialized")
 
     def __enter__(self):
         try:
             self.log_info(msg="Entering Nextcloud maintenance mode...")
             self.enter_maintenance_mode()
-            self.log_info(msg="DONE. successfully entered Nextcloud maintenance mode")
-        except NextcloudAppHandlerException as e:
+            self.log_info(msg="DONE. Successfully entered Nextcloud maintenance mode")
+        except:
             self.log_err(err="Unable to enter Nextcloud maintenance mode")
             self.clean_resources()
-            raise NextcloudAppHandlerException(message=e.message)
+            raise NextcloudAppHandlerException(message="Unable to enter Nextcloud maintenance mode")
 
         return self
 
@@ -90,7 +91,7 @@ class NextcloudAppHandler(Loggable):
             try:
                 self.log_info(msg="Exiting Nextcloud maintenance mode...")
                 self.exit_maintenance_mode()
-                self.log_info(msg="successfully exited Nextcloud maintenance mode")
+                self.log_info(msg="Successfully exited Nextcloud maintenance mode")
             except:
                 self.log_err(err="Unable to exit Nextcloud maintenance mode. You have to do it on your own")
     
@@ -141,36 +142,36 @@ class NextcloudAppHandler(Loggable):
 
     ### Methods implementation ###
     def enter_maintenance_mode(self):
-        self.log_info(msg="Enabling Netcloud maintenance mode...")
+        self.log_info(msg="  Enabling Netcloud maintenance mode...")
         try:
             resp = self.k8s_api.exec_container_command(pod_label="app="+self.config.app_name, command=NextcloudAppHandler.__ENTER_MAINTENANCE_CMD)
-        except K8sApiInstanceHandlerException as e:
+        except:
             self.log_err(err="Unable to enable Nextcloud maintenance mode")
-            raise NextcloudAppHandlerException(message="Unable to enter maintenance mode. The issue is the following:\n" + e)
+            raise NextcloudAppHandlerException(message="Unable to enter maintenance mode")
         
-        if resp == "Maintenance mode enabled\n":
+        if resp == "Maintenance mode enabled\n" or resp == "Maintenance mode already enabled\n":
             sleep(30)
         else:
             self.log_err(err="Unable to enable Nextcloud maintenance mode")
-            raise NextcloudAppHandlerException(message="Unable to enter maintenance mode. The issue is the following:\n" + resp)
+            raise NextcloudAppHandlerException(message="Unable to enter maintenance mode")
 
         self.__is_maintenance_mode_enabled = True
-        self.log_info(msg="DONE. Nextcloud maintenance mode successfully enabled")
+        self.log_info(msg="  DONE. Nextcloud maintenance mode successfully enabled")
 
     def exit_maintenance_mode(self):
-        self.log_info(msg="Disabling Netcloud maintenance mode...")
+        self.log_info(msg="  Disabling Netcloud maintenance mode...")
         try:
             resp = self.k8s_api.exec_container_command(pod_label="app="+self.config.app_name, command=NextcloudAppHandler.__EXIT_MAINTENANCE_CMD)
-        except K8sApiInstanceHandlerException as e:
-            self.log_err(err="Unable to disable Nextcloud maintenance mode")
-            raise NextcloudAppHandlerException(message="Unable to exit maintenance mode. You have to do it by hands. The issue is the following:\n" + e)
+        except:
+            self.log_err(err="Unable to disable Nextcloud maintenance mode. You have to do it by hands")
+            raise NextcloudAppHandlerException(message="Unable to exit maintenance mode. You have to do it by hands")
         
         if resp != "Maintenance mode disabled\n":
-            self.log_err(err="Unable to disable Nextcloud maintenance mode")
-            raise NextcloudAppHandlerException(message="Unable to exit maintenance mode. You have to do it by hands. The issue is the following:\n" + resp)
+            self.log_err(err="Unable to disable Nextcloud maintenance mode. You have to do it by hands")
+            raise NextcloudAppHandlerException(message="Unable to exit maintenance mode. You have to do it by hands")
 
         self.__is_maintenance_mode_enabled = False
-        self.log_info(msg="DONE. Nextcloud maintenance mode successfully disabled")
+        self.log_info(msg="  DONE. Nextcloud maintenance mode successfully disabled")
 
     def create_volume_snapshot(self, snapshot_name):
         self.log_info(msg="Creating the nextcloud volume snapshot with name " + snapshot_name + "...")
@@ -180,9 +181,9 @@ class NextcloudAppHandler(Loggable):
                     snapshot_name=snapshot_name,
                     pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.app_volume_name)
                 )
-            except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
+            except:
                 self.log_err(err="Unable to create the snapshot")
-                raise NextcloudAppHandlerException(message="Unable to create the snapshot. The issue is the following:\n" + e)
+                raise NextcloudAppHandlerException(message="Unable to create the snapshot")
         else:
             self.log_err(err="Nextcloud maintenance mode not enabled. Cannot continue with the snapshot creation")
             raise NextcloudAppHandlerException(message="Nextcloud maintenance mode not enabled. Cannot continue with the snapshot creation")
@@ -196,9 +197,9 @@ class NextcloudAppHandler(Loggable):
                     snapshot_name=snapshot_name,
                     pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.app_volume_name)
                 )
-            except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
+            except:
                 self.log_err(err="Unable to create the backup")
-                raise NextcloudAppHandlerException(message="Unable to create the backup. The issue is the following:\n" + e)
+                raise NextcloudAppHandlerException(message="Unable to create the backup")
         else:
             self.log_err(err="Nextcloud maintenance mode not enabled. Cannot continue with the backup creation")
             raise NextcloudAppHandlerException(message="Nextcloud maintenance mode not enabled. Cannot continue with the backup creation")
@@ -211,9 +212,9 @@ class NextcloudAppHandler(Loggable):
                 self.longhorn_api.delete_backups_and_snapshots_over_retain_count(
                     pv_name=self.k8s_api.get_pv_name_from_pvc_name(pvc_name=self.config.app_volume_name)
                 )
-            except (K8sApiInstanceHandlerException,LonghornApiInstanceHandlerException) as e:
+            except:
                 self.log_err(err="Unable to delete the old snapshots and backups")
-                raise NextcloudAppHandlerException(message="Unable to delete the old snapshots and backups. The issue is the following:\n" + e)
+                raise NextcloudAppHandlerException(message="Unable to delete the old snapshots and backups")
         else:
             self.log_err(err="Nextcloud maintenance mode not enabled. Cannot continue with the old snapshots and backups deletion")
             raise NextcloudAppHandlerException(message="Nextcloud maintenance mode not enabled. Cannot continue with the old backups and snapshots deletion")
