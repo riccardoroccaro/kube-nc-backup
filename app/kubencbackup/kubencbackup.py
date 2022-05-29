@@ -58,7 +58,7 @@ class KubeNCBackup(Loggable):
         try:
             self.log_info("Retrieving the configuration from the environment variables...")
 
-            # raise Exception("Test")
+            raise Exception("Test")
 
             backup_config = BackupConfig()
 
@@ -70,6 +70,8 @@ class KubeNCBackup(Loggable):
 
         # Init kubernetes, longhorn and mariadb api handlers with their correspondent connections
         try:
+            raise Exception("Test")
+
             self.log_info("Preparing the system for the snapshots/backups...")
             self.log_info("  Initializing Kubernetes, MariaDB and Longhorn APIs...")
             # raise Exception("Test")
@@ -78,19 +80,19 @@ class KubeNCBackup(Loggable):
                 MariaDBApiInstanceHandler(conf_ext.backupconfig_to_mariadb_api_instance_config(backup_config)) as mariadb_api, \
                 LonghornApiInstanceHandler(conf_ext.backupconfig_to_longhorn_api_instance_config(backup_config)) as longhorn_api:
 
-                # raise Exception("Test")
+                raise Exception("Test")
                 try:
                     # Create nextcloud app handler and automatically enter maintenance mode
                     self.log_info("DONE. Prepare Nextcloud to be backupped...")
-                    # raise Exception("Test")
+                    raise Exception("Test")
                     with NextcloudAppHandler(config=conf_ext.backupconfig_to_nextcloud_app_config(backup_config),k8s_api=k8s_api,longhorn_api=longhorn_api) as ncah:
                         # Succesfully initialized the APIs and Nextcloud APP => next step
                         self.__process_status[self.process_step] = 1
                         self.__process_step += 1
-                        # raise Exception("Test")
+                        raise Exception("Test")
                         # Create nextcloud snapshot and backup (if required)
                         try:
-                            # raise Exception("Test")
+                            raise Exception("Test")
                             # Set snapshots and backups name
                             snapshot_backup_name=datetime.now().strftime("%d-%m-%Y__%H-%M-%S")
 
@@ -116,15 +118,16 @@ class KubeNCBackup(Loggable):
                             self.__new_stacktrace_block(sys.exc_info())
                             return
 
-                        # raise Exception("Test")
+                        raise Exception("Test")
 
                         self.log_info("DONE. Prepare MariaDB to be backupped...")
                         # Create mariadb app handler and automatically enter backup mode
                         try:
-                            # raise Exception("Test")
+                            raise Exception("Test")
                             with MariaDBAppHandler(config=conf_ext.backupconfig_to_mariadb_app_config(backup_config),k8s_api=k8s_api,mariadb_api=mariadb_api,longhorn_api=longhorn_api) as mdbah:
-                                # raise Exception("Test")
+                                raise Exception("Test")
                                 try:
+                                    raise Exception("Test")
                                     # Create mariadb actual volume snapshot
                                     self.log_info("DONE. Creating the MariaDB actual volume snapshot...")
                                     # raise Exception("Test")
@@ -157,7 +160,7 @@ class KubeNCBackup(Loggable):
                             self.__process_step += 1
                         # The resources above will be released and the correspondent connections closed through the 'with' statement
 
-                        # raise Exception("Test")
+                        raise Exception("Test")
 
                         # Create mysqldump file
                         self.log_info("DONE. Create the db backup in SQL format...")
