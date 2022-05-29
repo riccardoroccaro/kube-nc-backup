@@ -4,6 +4,8 @@ import textwrap
 
 from datetime import datetime
 
+from kubencbackup.common.textcolor import TextColor
+
 class Loggable:
     def __init__(self, name=None, log_level=0):
         self.name = name
@@ -14,6 +16,8 @@ class Loggable:
             self.__indent_str += "  "
 
         self.log_depth = os.getenv('LOG_DEPTH')
+
+        self.log_msg_col_len = os.getenv('LOG_MSG_COL_LEN')
 
     @property
     def name(self):
@@ -51,6 +55,17 @@ class Loggable:
         except:
             self.__log_depth=100
 
+    @property
+    def log_msg_col_len(self):
+        return self.__log_msg_col_len
+
+    @log_msg_col_len.setter
+    def log_msg_col_len(self, log_msg_col_len):
+        try:
+            self.__log_msg_col_len = int (log_msg_col_len)
+        except:
+            self.__log_msg_col_len=180
+
     def __prefix(prefix):
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return "# [" + now_str + "]" + prefix
@@ -60,14 +75,45 @@ class Loggable:
             prefix = Loggable.__prefix(self.__indent_str + "["+self.name+"][INFO]: ")
             wrapper = textwrap.TextWrapper(
                 initial_indent=prefix,
-                width=180,
+                width=self.log_msg_col_len,
                 subsequent_indent=' '*len(prefix))
             print(wrapper.fill(msg))
 
     def log_err(self, err):
-        prefix = Loggable.__prefix(self.__indent_str + "["+self.name+"][ERR ]: ")
+        prefix = Loggable.__prefix(TextColor.wrap_text(col=TextColor.RED(), text=self.__indent_str + "["+self.name+"][ERR#]: "))
         wrapper = textwrap.TextWrapper(
             initial_indent=prefix,
-            width=180,
-            subsequent_indent=' '*len(prefix))
+            width=self.log_msg_col_len,
+            subsequent_indent=' '*(len(prefix) - TextColor.wrapped_text_overhead(col=TextColor.RED())))
         print(wrapper.fill(err))
+
+    def log_warn(self, msg):
+        prefix = Loggable.__prefix(TextColor.wrap_text(col=TextColor.YELLOW(), text=self.__indent_str + "["+self.name+"][WARN]: "))
+        wrapper = textwrap.TextWrapper(
+            initial_indent=prefix,
+            width=self.log_msg_col_len,
+            subsequent_indent=' '*(len(prefix) - TextColor.wrapped_text_overhead(col=TextColor.YELLOW())))
+        print(wrapper.fill(msg))
+
+    def log_ok(self, msg):
+        prefix = Loggable.__prefix(TextColor.wrap_text(col=TextColor.GREEN(), text=self.__indent_str + "["+self.name+"][OK##]: "))
+        wrapper = textwrap.TextWrapper(
+            initial_indent=prefix,
+            width=self.log_msg_col_len,
+            subsequent_indent=' '*(len(prefix) - TextColor.wrapped_text_overhead(col=TextColor.GREEN())))
+        print(wrapper.fill(msg))
+
+    def log_debug(self, msg):
+        prefix = Loggable.__prefix(TextColor.wrap_text(col=TextColor.YELLOW(), text=self.__indent_str + "["+self.name+"][DEB#]: "))
+        wrapper = textwrap.TextWrapper(
+            initial_indent=prefix,
+            width=self.log_msg_col_len,
+            subsequent_indent=' '*len(prefix))
+        print(wrapper.fill(TextColor.wrap_text(col=TextColor.YELLOW(),text=msg)))
+
+# l = Loggable()
+# l.log_info("Informazione...................................................................................................................................................")
+# l.log_ok("Tutto ok...................................................................................................................................................")
+# l.log_warn("Non proprio ok...................................................................................................................................................")
+# l.log_err("Errore...................................................................................................................................................")
+# l.log_debug("<===== BEGIN exceptions traceback block #" + str(0) + " =====>")
