@@ -85,7 +85,7 @@ class Loggable:
             initial_indent=prefix,
             width=self.log_msg_col_len,
             subsequent_indent=' '*(len(prefix) - TextColor.wrapped_text_overhead(col=TextColor.RED())))
-        print(wrapper.fill(err))
+        print(wrapper.fill(TextColor.wrap_text(col=TextColor.RED(), text=err)))
 
     def log_warn(self, msg):
         prefix = Loggable.__prefix(TextColor.wrap_text(col=TextColor.YELLOW(), text=self.__indent_str + "["+self.name+"][WARN]: "))
@@ -93,7 +93,7 @@ class Loggable:
             initial_indent=prefix,
             width=self.log_msg_col_len,
             subsequent_indent=' '*(len(prefix) - TextColor.wrapped_text_overhead(col=TextColor.YELLOW())))
-        print(wrapper.fill(msg))
+        print(wrapper.fill(TextColor.wrap_text(col=TextColor.YELLOW(), text=msg)))
 
     def log_ok(self, msg):
         prefix = Loggable.__prefix(TextColor.wrap_text(col=TextColor.GREEN(), text=self.__indent_str + "["+self.name+"][OK##]: "))
@@ -101,19 +101,15 @@ class Loggable:
             initial_indent=prefix,
             width=self.log_msg_col_len,
             subsequent_indent=' '*(len(prefix) - TextColor.wrapped_text_overhead(col=TextColor.GREEN())))
-        print(wrapper.fill(msg))
+        print(wrapper.fill(TextColor.wrap_text(col=TextColor.GREEN(), text=msg)))
 
-    def log_debug(self, msg):
-        prefix = Loggable.__prefix(TextColor.wrap_text(col=TextColor.YELLOW(), text=self.__indent_str + "["+self.name+"][DEB#]: "))
+    def log_debug(self, msg, date_time_enabled=True):
+        if date_time_enabled:
+            prefix = Loggable.__prefix(TextColor.wrap_text(col=TextColor.YELLOW(), text=self.__indent_str + "["+self.name+"][DEB#]: "))
+        else:
+            prefix = TextColor.wrap_text(col=TextColor.YELLOW(), text=self.__indent_str + "["+self.name+"][DEB#]: ")
         wrapper = textwrap.TextWrapper(
             initial_indent=prefix,
             width=self.log_msg_col_len,
             subsequent_indent=' '*len(prefix))
         print(wrapper.fill(TextColor.wrap_text(col=TextColor.YELLOW(),text=msg)))
-
-# l = Loggable()
-# l.log_info("Informazione...................................................................................................................................................")
-# l.log_ok("Tutto ok...................................................................................................................................................")
-# l.log_warn("Non proprio ok...................................................................................................................................................")
-# l.log_err("Errore...................................................................................................................................................")
-# l.log_debug("<===== BEGIN exceptions traceback block #" + str(0) + " =====>")

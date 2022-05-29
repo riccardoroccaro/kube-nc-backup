@@ -266,9 +266,9 @@ class KubeNCBackup(Loggable):
             i = 0
             for t in self.__tracebacks_list:
                 print("\n")
-                self.log_debug("##### Exceptions traceback for block #" + str(i) + " #####")
+                self.log_debug("##### Exceptions traceback for block #" + str(i) + " #####", False)
                 traceback.print_exception(*t)
-                self.log_debug("##### END Exception traceback for block #" + str(i) + " #####\n")
+                self.log_debug("##### END Exception traceback for block #" + str(i) + " #####\n", False)
                 i += 1
 
     def __new_stacktrace_block(self, ex_info):
